@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="kamon-grulla" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <ellipse cx="50" cy="52" rx="10" ry="6.5" />
+      <path d="M43 49C34 36 22 28 12 30c8 6 15 13 21 22z" />
+      <path d="M57 49c9-13 21-21 31-19-8 6-15 13-21 22z" />
+      <path d="M45 48c-4-11 0-20 8-27l4 4c-6 6-8 13-5 22z" />
+      <circle cx="58" cy="21" r="3.4" />
+      <path d="M61 20l8-3-7 6z" />
+      <path d="M57 57l14 10-16-4z" />
+      <path d="M46 58l-9 12M53 58l7 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-glicina" viewBox="0 0 100 100">
+    <path d="M50 12c-3 10 1 18 6 25" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+    <g fill="currentColor">
+      <circle cx="35" cy="36" r="5" />
+      <circle cx="47" cy="32" r="5" />
+      <circle cx="59" cy="38" r="5" />
+      <circle cx="30" cy="48" r="5" />
+      <circle cx="42" cy="46" r="5" />
+      <circle cx="54" cy="50" r="5" />
+      <circle cx="65" cy="50" r="4" />
+      <circle cx="36" cy="60" r="4.5" />
+      <circle cx="48" cy="60" r="4.5" />
+      <circle cx="59" cy="62" r="4" />
+      <circle cx="42" cy="72" r="4" />
+      <circle cx="53" cy="73" r="3.5" />
+      <circle cx="47" cy="84" r="3" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-mariposa" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <path d="M48 46C38 28 20 20 14 28c-6 9 8 22 24 26-16 4-24 16-17 23 7 6 19-4 27-17z" />
+      <path d="M52 46c10-18 28-26 34-18 6 9-8 22-24 26 16 4 24 16 17 23-7 6-19-4-27-17z" />
+      <ellipse cx="50" cy="56" rx="3.4" ry="15" />
+      <circle cx="50" cy="39" r="4" />
+    </g>
+    <path d="M47 36c-3-6-7-10-12-12M53 36c3-6 7-10 12-12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+  </symbol>
+
+  <symbol id="kamon-abanico" viewBox="0 0 100 100">
+    <path d="M50 84 18 42a42 42 0 0 1 64 0z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" />
+    <path d="M50 84 30 38M50 84V24M50 84l20-46M50 84 20 52M50 84l30-32" fill="none" stroke="currentColor" stroke-width="2.4" />
+    <circle cx="50" cy="81" r="5" fill="currentColor" />
+  </symbol>
+
+  <symbol id="kamon-sakura" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <path d="M50 18c7 9 7 18 0 25-7-7-7-16 0-25z" />
+      <path d="M50 18c7 9 7 18 0 25-7-7-7-16 0-25z" transform="rotate(72 50 50)" />
+      <path d="M50 18c7 9 7 18 0 25-7-7-7-16 0-25z" transform="rotate(144 50 50)" />
+      <path d="M50 18c7 9 7 18 0 25-7-7-7-16 0-25z" transform="rotate(216 50 50)" />
+      <path d="M50 18c7 9 7 18 0 25-7-7-7-16 0-25z" transform="rotate(288 50 50)" />
+      <circle cx="50" cy="50" r="5" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-tomoe" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <path d="M50 20c15 0 24 10 24 22 0 10-7 18-17 18 9-6 12-16 5-23-5-5-12-6-18-3z" />
+      <path d="M50 20c15 0 24 10 24 22 0 10-7 18-17 18 9-6 12-16 5-23-5-5-12-6-18-3z" transform="rotate(120 50 50)" />
+      <path d="M50 20c15 0 24 10 24 22 0 10-7 18-17 18 9-6 12-16 5-23-5-5-12-6-18-3z" transform="rotate(240 50 50)" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-libelula" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <rect x="47" y="32" width="6" height="46" rx="3" />
+      <circle cx="50" cy="26" r="5" />
+      <path d="M46 38C36 27 22 27 14 34c8 8 22 10 32 8z" />
+      <path d="M54 38c10-11 24-11 32-4-8 8-22 10-32 8z" />
+      <path d="M46 50C37 43 26 44 20 49c7 6 18 7 26 5z" opacity="0.85" />
+      <path d="M54 50c9-7 20-6 26-1-7 6-18 7-26 5z" opacity="0.85" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-ola" viewBox="0 0 100 100">
+    <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round">
+      <path d="M18 66c6-24 22-38 43-38 16 0 26 10 26 22 0 11-8 19-18 19-8 0-14-6-14-13 0-6 4-11 10-11 4 0 7 2 9 6" />
+      <path d="M18 78c12-9 25-13 39-13" />
+      <path d="M26 88c12-7 25-9 38-8" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-arce" viewBox="0 0 100 100">
+    <path d="M50 14l7 15 15-6-6 15 18 2-14 11 10 15-18-4 1 19-13-13-13 13 1-19-18 4 10-15-14-11 18-2-6-15 15 6z" fill="currentColor" />
+    <path d="M50 58v27" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+  </symbol>
+
+  <symbol id="kamon-luna" viewBox="0 0 100 100">
+    <path d="M62 16a36 36 0 1 0 0 68 30 30 0 0 1 0-68z" fill="currentColor" />
+    <path d="M20 74h30M26 82h18" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.5" />
+  </symbol>
+
+  <symbol id="kamon-bambu" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <rect x="45" y="15" width="7" height="27" rx="1" />
+      <rect x="45" y="45" width="7" height="20" rx="1" />
+      <rect x="45" y="68" width="7" height="22" rx="1" />
+      <rect x="24" y="39" width="6" height="21" rx="1" />
+      <rect x="24" y="63" width="6" height="27" rx="1" />
+      <rect x="67" y="29" width="6" height="23" rx="1" />
+      <rect x="67" y="55" width="6" height="35" rx="1" />
+      <path d="M48 44c-8-6-18-8-27-5 7 5 17 8 27 8z" />
+      <path d="M48 44c7-7 17-10 26-8-6 6-16 10-26 11z" />
+      <path d="M52 69c8-5 17-6 25-3-7 5-16 7-25 6z" />
+      <path d="M44 63c-7-5-15-7-23-5 6 5 14 7 23 7z" />
+      <path d="M70 54c7-2 14-1 20 2-6 3-13 3-20 1z" />
+    </g>
+  </symbol>
+
+  <symbol id="kamon-koi" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <path d="M22 50 6 32v12L2 36l4 14-4 14 4-8v12z" />
+      <path d="M24 50c10-17 33-23 52-14 9 4 16 9 20 14-4 5-11 10-20 14-19 9-42 3-52-14z" />
+      <path d="M52 35c4-8 12-11 19-9-4 4-7 8-8 13z" />
+      <path d="M52 55c4 7 4 13 1 19-4-5-6-11-6-17z" />
+    </g>
+    <path
+      d="M42 42c5 3 6 8 4 13M54 41c5 3 6 8 4 13M66 42c5 3 6 8 4 13"
+      fill="none"
+      stroke="#f7efdb"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      opacity="0.4"
+    />
+    <circle cx="76" cy="46" r="2.5" fill="#f7efdb" />
+  </symbol>
+</svg>

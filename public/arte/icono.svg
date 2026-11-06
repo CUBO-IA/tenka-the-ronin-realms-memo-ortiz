@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="18" fill="#1b1e3a" />
+  <rect x="10" y="10" width="108" height="108" rx="12" fill="none" stroke="#b08b3e" stroke-width="2" opacity="0.55" />
+  <text x="64" y="93" text-anchor="middle" font-family="Hiragino Mincho ProN, Yu Mincho, serif" font-size="78" fill="#f2e8d2">天</text>
+</svg>
