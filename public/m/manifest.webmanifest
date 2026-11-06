@@ -1,0 +1,19 @@
+{
+  "name": "Tenka: The Rōnin Realms",
+  "short_name": "Tenka",
+  "description": "Light or Shadow. Your rōnin builds while you sleep.",
+  "start_url": "/m",
+  "scope": "/m",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2e8d2",
+  "theme_color": "#1b1e3a",
+  "icons": [
+    {
+      "src": "/arte/icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

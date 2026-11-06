@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b1e3a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tenka" />
+    <meta
+      name="description"
+      content="Create your rōnin, choose the path of Light or Shadow, and let him build while you sleep."
+    />
+    <title>Tenka — Create your Rōnin</title>
+    <link rel="manifest" href="/m/manifest.webmanifest" />
+    <link rel="icon" href="/arte/icono.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/arte/icono.svg" />
+    <link rel="stylesheet" href="/estilos/tenka.css" />
+    <link rel="stylesheet" href="/m/m.css" />
+  </head>
+  <body class="pagina-movil" data-bando="luz">
+    <main class="hoja">
+      <header class="cabecera-movil">
+        <div class="titulo-movil">
+          <p class="antetitulo">The Rōnin Realms</p>
+          <h1 id="titulo-movil">Create your Rōnin</h1>
+        </div>
+        <div class="sello-marca" aria-hidden="true">
+          <span class="kanji">天下</span>
+          <span class="sello-cuadrado pequeno">天</span>
+        </div>
+      </header>
+
+      <section id="estado-cargando" class="estado-pantalla">
+        <p class="cargando">Opening the seal…</p>
+      </section>
+
+      <section id="estado-sin-sesion" class="estado-pantalla oculto">
+        <p class="sello-cuadrado" aria-hidden="true">天</p>
+        <h2>This phone is not linked yet</h2>
+        <p>
+          Open Tenka on the computer and scan the seal with your phone camera. Then
+          your rōnin can be summoned from here.
+        </p>
+      </section>
+
+      <section id="estado-error" class="estado-pantalla oculto">
+        <p class="sello-cuadrado" aria-hidden="true">天</p>
+        <h2>The seal is silent</h2>
+        <p id="texto-error">The server could not be reached.</p>
+        <button class="boton-tinta" type="button" onclick="location.reload()">Try again</button>
+      </section>
+
+      <!-- El rōnin ya existe -->
+      <section id="estado-despierto" class="oculto" aria-labelledby="despierto-titulo">
+        <div class="despierto-marco">
+          <div class="despierto-estandarte">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <use id="despierto-kamon" href="/arte/kamon.svg#kamon-grulla"></use>
+            </svg>
+          </div>
+          <p class="antetitulo">The oath is spoken</p>
+          <h2 id="despierto-titulo">Your rōnin is awake</h2>
+          <p id="despierto-detalle" class="despierto-detalle"></p>
+          <div class="despierto-fichas">
+            <span><i id="despierto-kimono-color" class="punto-color"></i><b id="despierto-kimono"></b></span>
+            <span><i id="despierto-faja-color" class="punto-color"></i><b id="despierto-faja"></b></span>
+            <span id="despierto-camino"></span>
+          </div>
+          <div class="despierto-sello">
+            <span class="sello-cuadrado pequeno" aria-hidden="true">天</span>
+            <small>Your phone is his voice. The realm is watching.</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- Crear el rōnin -->
+      <form id="form-ronin" class="oculto" novalidate>
+        <fieldset class="grupo-bandos">
+          <legend class="solo-lectores">Choose your path</legend>
+          <div class="bandos">
+            <button
+              class="bando activo"
+              type="button"
+              data-bando="luz"
+              aria-pressed="true"
+            >
+              <span class="bando-nombre">Light</span>
+              <span class="bando-escena">
+                <svg viewBox="0 0 220 132" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="cieloLuz" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#b7cfdd" />
+                      <stop offset="0.62" stop-color="#dfe9ec" />
+                      <stop offset="1" stop-color="#f3efe1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="220" height="132" fill="url(#cieloLuz)" />
+                  <circle cx="52" cy="28" r="11" fill="#fff8e8" opacity="0.72" />
+                  <path d="M0 91 44 42 70 66 104 30 138 68 164 48 220 92V132H0Z" fill="#d8e5ea" />
+                  <path d="M0 106 40 74 66 93 92 63 124 97 150 77 186 101 220 85V132H0Z" fill="#a9c1d0" />
+                  <path d="M0 132v-20l30-10 30 10 30-8 30 10 34-8 26 6 40-4v24Z" fill="#f7f3e6" />
+                  <g fill="#3c5a6a">
+                    <path d="M136 100l6 14h-12zM136 92l8 18h-16z" />
+                    <path d="M158 104l5 12h-10zM158 98l7 15h-14z" />
+                    <path d="M178 107l4 10h-8zM178 102l6 13h-12z" />
+                    <path d="M118 108l4 10h-8zM118 103l5 12h-10z" />
+                  </g>
+                  <g stroke="#4d6d81" fill="none" stroke-width="1.6" stroke-linecap="round" opacity="0.9">
+                    <path d="M68 34c5-4 9-4 14 0c5-4 9-4 14 0" />
+                    <path d="M96 56c4-3 7-3 11 0c4-3 7-3 11 0" opacity="0.7" />
+                  </g>
+                  <g fill="#fff" opacity="0.75">
+                    <circle cx="26" cy="22" r="1.2" /><circle cx="86" cy="16" r="1" />
+                    <circle cx="122" cy="38" r="1.4" /><circle cx="188" cy="20" r="1" />
+                    <circle cx="64" cy="55" r="1" /><circle cx="160" cy="72" r="1.2" />
+                  </g>
+                </svg>
+              </span>
+              <span class="bando-lema">Snow, cedar and discipline.</span>
+            </button>
+
+            <button
+              class="bando"
+              type="button"
+              data-bando="sombra"
+              aria-pressed="false"
+            >
+              <span class="bando-nombre">Shadow</span>
+              <span class="bando-escena">
+                <svg viewBox="0 0 220 132" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="cieloSombra" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#241b33" />
+                      <stop offset="0.55" stop-color="#4a3562" />
+                      <stop offset="1" stop-color="#221c2e" />
+                    </linearGradient>
+                    <linearGradient id="aguaSombra" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#2f2a44" />
+                      <stop offset="1" stop-color="#161522" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="220" height="132" fill="url(#cieloSombra)" />
+                  <circle cx="170" cy="28" r="12" fill="#f1e7cf" opacity="0.9" />
+                  <path d="M0 94 38 68 72 88 108 58 142 90 174 70 220 96V132H0Z" fill="#2b2039" />
+                  <path d="M0 132V108c32-8 64 6 98-2 34-8 76 2 122-8v34Z" fill="url(#aguaSombra)" />
+                  <g stroke="#6e4b8f" fill="none" stroke-width="1.2" opacity="0.45">
+                    <path d="M6 116c20-5 36 3 56-1M92 122c18-4 34 3 52-1M48 126c16-4 30 2 46-1" />
+                  </g>
+                  <g stroke="#120e18" fill="none" stroke-linecap="round">
+                    <path d="M44 116c3-26-2-42-12-56M33 74c-10-4-16-10-20-18M33 74c8-6 14-14 16-24M33 74c-2 14 2 24 0 34" stroke-width="3" />
+                    <path d="M20 56c-4 8-3 16-6 24M49 50c4 8 2 16 5 24M39 62c-6 6-9 14-10 22" stroke-width="1.4" />
+                    <path d="M182 110c-2-18 2-30 10-42M192 68c6-2 10-6 13-12M192 68c-6-4-10-10-12-16" stroke-width="2.4" />
+                    <path d="M178 78c-2 8-6 14-12 18M201 62c3 7 3 14 1 21" stroke-width="1.2" />
+                  </g>
+                  <g fill="#a374e8" opacity="0.55">
+                    <path d="M70 82c-5-5-2-10 2-15 0 5 5 7 3 12-1 3-3 4-5 3z" />
+                    <path d="M128 92c-4-4-2-9 2-13 0 4 4 6 2 10-1 2-2 4-4 3z" opacity="0.7" />
+                    <path d="M154 100c-3-3-1-7 1-10 0 3 3 5 2 8-1 2-2 3-3 2z" opacity="0.6" />
+                  </g>
+                  <g fill="#f1e7cf" opacity="0.7">
+                    <circle cx="36" cy="24" r="1" /><circle cx="88" cy="34" r="1.2" />
+                    <circle cx="122" cy="18" r="0.9" /><circle cx="200" cy="48" r="1" />
+                  </g>
+                </svg>
+              </span>
+              <span class="bando-lema">Mist, willow and ambition.</span>
+            </button>
+          </div>
+        </fieldset>
+
+        <div id="preview" class="preview" data-bando="luz" aria-hidden="true">
+          <svg class="ronin-preview" viewBox="0 0 260 330">
+            <ellipse cx="122" cy="312" rx="58" ry="9" fill="rgba(20, 16, 12, 0.22)" />
+
+            <!-- estandarte del clan -->
+            <g>
+              <rect x="206" y="34" width="4" height="238" rx="2" fill="#6b4c2b" />
+              <circle cx="208" cy="31" r="4" fill="#6b4c2b" />
+              <path d="M206 57H252V150c-12 7-26-5-42 3z" fill="var(--tela)" stroke="var(--tela-borde)" stroke-width="1.5" />
+              <svg x="216" y="76" width="28" height="28" class="kamon-preview">
+                <use id="preview-kamon" href="/arte/kamon.svg#kamon-grulla"></use>
+              </svg>
+              <path d="M206 62h-6M206 146h-6" stroke="#6b4c2b" stroke-width="2" />
+            </g>
+
+            <!-- hakama y sandalias -->
+            <path d="M90 198H158L172 292q-22 10-44 5-20 5-46-5z" fill="var(--hakama)" />
+            <path d="M124 208v86" stroke="rgba(255,255,255,0.1)" stroke-width="1.4" />
+            <g fill="#3a2a1c">
+              <rect x="92" y="294" width="28" height="9" rx="4" />
+              <rect x="130" y="294" width="28" height="9" rx="4" />
+            </g>
+            <g stroke="#8a6a42" stroke-width="1.2">
+              <path d="M98 294l8-4M106 294l8-4M136 294l8-4M144 294l8-4" />
+            </g>
+
+            <!-- torso, mangas y cuello -->
+            <path d="M94 132q30-16 62 0l8 60q0 16-18 18H100q-16-2-16-18z" fill="var(--kimono)" />
+            <path
+              d="M94 136c-22 10-30 42-28 62 1 10 12 12 20 6l10-8z"
+              fill="var(--kimono)"
+              stroke="var(--kimono-borde)"
+              stroke-width="1"
+            />
+            <path
+              d="M156 136c22 10 30 42 28 62-1 10-12 12-20 6l-10-8z"
+              fill="var(--kimono)"
+              stroke="var(--kimono-borde)"
+              stroke-width="1"
+            />
+            <path d="M108 129l16 29 18-29 8 6-26 39-26-39z" fill="var(--cuello)" />
+            <path d="M126 165v43" stroke="var(--kimono-borde)" stroke-width="1.2" opacity="0.5" />
+
+            <!-- faja y nudo -->
+            <rect x="88" y="178" width="72" height="15" rx="2" fill="var(--faja)" />
+            <path d="M154 184q9-6 9 3 0 8-9 5z" fill="var(--faja)" stroke="rgba(0,0,0,0.22)" stroke-width="1" />
+            <path d="M158 191l12 18-8-1-7-15zM154 191l-2 19-6-2 3-17z" fill="var(--faja)" opacity="0.9" />
+
+            <!-- cuello, cabeza y rostro -->
+            <rect x="116" y="110" width="16" height="20" rx="5" fill="var(--piel)" />
+            <ellipse cx="124" cy="96" rx="21" ry="24" fill="var(--piel)" />
+            <circle cx="103" cy="99" r="4" fill="var(--piel)" />
+            <circle cx="145" cy="99" r="4" fill="var(--piel)" />
+            <g class="cabello" fill="#1b1719">
+              <path d="M103 94q-1-24 21-26 22 2 21 26-9-12-21-12t-21 12z" />
+            </g>
+            <g stroke="#2b211b" stroke-width="1.6" stroke-linecap="round" fill="none">
+              <path d="M114 98q3-2 6 0M128 98q3-2 6 0M121 108q3 2 6 0" />
+            </g>
+
+            <!-- sombrero de paja -->
+            <g id="grupo-sombrero">
+              <path d="M105 82q19-20 38 0-19-8-38 0z" fill="#c79a55" />
+              <path d="M82 86q42-16 84 0 2 7-8 9-34-15-68 0-10-2-8-9z" fill="#b98c4a" />
+              <path d="M107 84q17-6 34 0" stroke="#6b4c2b" stroke-width="2" fill="none" />
+            </g>
+
+            <!-- moño -->
+            <g id="grupo-mono" class="oculto">
+              <path d="M103 94q-1-26 21-28 22 2 21 28-9-14-21-14t-21 14z" fill="#17151a" />
+              <ellipse cx="124" cy="62" rx="9" ry="7" fill="#17151a" />
+              <path d="M118 65q6 4 12 0" stroke="#4a3b45" stroke-width="1.6" fill="none" />
+            </g>
+
+            <!-- espada -->
+            <path d="M88 208l-26 60" stroke="#17151a" stroke-width="6" stroke-linecap="round" />
+            <path d="M96 204l16-18" stroke="#2a2320" stroke-width="7" stroke-linecap="round" />
+            <circle cx="94" cy="207" r="5" fill="#b08b3e" />
+          </svg>
+        </div>
+
+        <p id="lema-bando" class="lema-bando">Snow, cedar and discipline.</p>
+
+        <div class="opciones">
+          <div class="fila-opcion">
+            <span class="etiqueta-opcion">Kimono</span>
+            <div id="opciones-kimono" class="muestras" role="group" aria-label="Kimono color"></div>
+          </div>
+
+          <div class="fila-opcion">
+            <span class="etiqueta-opcion">Sash</span>
+            <div id="opciones-faja" class="muestras" role="group" aria-label="Sash color"></div>
+          </div>
+
+          <div class="fila-opcion">
+            <span class="etiqueta-opcion">Headwear</span>
+            <div id="opciones-tocado" class="muestras" role="group" aria-label="Headwear"></div>
+          </div>
+
+          <div class="fila-opcion fila-crest">
+            <span class="etiqueta-opcion">Clan crest</span>
+            <div id="opciones-kamon" class="mosaico" role="group" aria-label="Clan crest"></div>
+          </div>
+
+          <label class="fila-nombre" for="nombre-ronin">
+            <span>Name</span>
+            <input
+              id="nombre-ronin"
+              class="entrada-papel"
+              type="text"
+              autocomplete="off"
+              autocapitalize="words"
+              maxlength="20"
+              placeholder="Hideo"
+              required
+            />
+          </label>
+        </div>
+
+        <p id="error-ronin" class="error" role="alert"></p>
+
+        <button id="btn-despertar" class="boton-laca boton-despertar" type="submit">
+          Awaken your Rōnin
+        </button>
+        <p class="nota-movil">Your phone is his voice. Choose well, master.</p>
+      </form>
+    </main>
+
+    <script type="module" src="/m/m.js"></script>
+  </body>
+</html>
