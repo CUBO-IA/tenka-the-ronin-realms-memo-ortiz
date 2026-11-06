@@ -1,0 +1,6 @@
+node_modules/
+tenka.db
+tenka.db-shm
+tenka.db-wal
+.env
+.DS_Store
