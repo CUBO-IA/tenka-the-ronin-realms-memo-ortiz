@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f2e8d2" />
+    <title>Tenka — The Rōnin Realms</title>
+    <meta
+      name="description"
+      content="Light or Shadow. Your rōnin builds while you sleep."
+    />
+    <link rel="stylesheet" href="/estilos/tenka.css" />
+    <link rel="stylesheet" href="/estilos/pc.css" />
+  </head>
+  <body class="pagina-pc">
+    <!-- Fondo: tinta de sombra a la izquierda, nieve y cedros a la derecha. -->
+    <div class="fondo-ink" aria-hidden="true">
+      <div class="lado-sombra">
+        <div class="luna"></div>
+        <svg class="sauces" viewBox="0 0 500 700" preserveAspectRatio="xMinYMax slice">
+          <g fill="none" stroke="#0a0d18" stroke-linecap="round">
+            <path d="M0 648 C80 612 150 628 235 616 C320 604 390 624 500 592" stroke-width="18" opacity="0.55" />
+            <path d="M120 654 C126 560 116 470 128 402 C134 362 148 330 152 292" stroke-width="9" />
+            <path d="M130 470 C96 438 62 420 38 392 M128 430 C168 402 196 372 210 340 M148 356 C120 326 96 306 84 276" stroke-width="5" />
+            <path d="M38 392 C26 452 44 512 30 566 M84 276 C72 342 92 398 78 454 M210 340 C196 404 216 458 202 512 M152 292 C140 350 160 402 146 454" stroke-width="2.2" opacity="0.9" />
+            <path d="M96 420 C84 474 100 520 88 570 M168 402 C154 456 170 504 158 552 M62 330 C50 380 66 424 54 470 M194 310 C182 358 198 400 186 446" stroke-width="1.6" opacity="0.75" />
+            <path d="M258 660 C252 590 258 520 246 458 C240 426 228 400 226 372" stroke-width="7" />
+            <path d="M248 494 C278 466 300 438 306 404 M246 454 C216 430 196 404 188 374 M226 372 C244 344 266 326 288 314" stroke-width="4" />
+            <path d="M306 404 C294 456 310 500 298 548 M226 372 C212 426 230 470 216 518 M188 374 C176 424 192 464 180 508 M288 314 C276 366 292 406 280 452" stroke-width="1.6" opacity="0.8" />
+            <path d="M330 650 C338 594 330 544 344 500" stroke-width="5" />
+            <path d="M344 500 C372 480 390 458 398 430 M344 500 C318 480 300 460 292 434" stroke-width="3" />
+            <path d="M398 430 C388 480 402 518 392 560 M292 434 C280 480 296 518 284 556" stroke-width="1.4" opacity="0.7" />
+          </g>
+          <path d="M0 660 C90 630 170 646 260 632 C350 618 420 642 500 616 L500 700 L0 700Z" fill="#0a0d18" opacity="0.65" />
+        </svg>
+        <svg class="fuegos" viewBox="0 0 600 700" preserveAspectRatio="xMinYMax slice">
+          <g fill="#a374e8">
+            <g transform="translate(120 500) scale(1.4)">
+              <path class="fuego" d="M0 34 C-11 23 -4 12 5 3 C2 14 13 18 10 28 C9 35 5 38 0 34Z" />
+            </g>
+            <g transform="translate(205 585) scale(0.9)">
+              <path class="fuego" d="M0 34 C-11 23 -4 12 5 3 C2 14 13 18 10 28 C9 35 5 38 0 34Z" />
+            </g>
+            <g transform="translate(58 560) scale(0.7)">
+              <path class="fuego" d="M0 34 C-11 23 -4 12 5 3 C2 14 13 18 10 28 C9 35 5 38 0 34Z" />
+            </g>
+            <g transform="translate(300 610) scale(0.6)">
+              <path class="fuego" d="M0 34 C-11 23 -4 12 5 3 C2 14 13 18 10 28 C9 35 5 38 0 34Z" />
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="lado-luz">
+        <svg class="montanas" viewBox="0 0 900 700" preserveAspectRatio="xMaxYMax slice">
+          <defs>
+            <pattern id="pinos-luz" width="64" height="58" patternUnits="userSpaceOnUse">
+              <path d="M16 6 L24 26 H20 L27 41 H5 L12 26 H8 Z" fill="#33505f" />
+              <path d="M50 16 L56 32 H53 L59 44 H41 L47 32 H44 Z" fill="#2b4655" opacity="0.85" />
+            </pattern>
+          </defs>
+          <path d="M0 700 L0 512 L118 392 L208 482 L330 318 L432 468 L520 298 L640 458 L730 338 L822 468 L900 398 L900 700Z" fill="#d6e1e7" />
+          <path d="M0 700 L0 592 L150 470 L272 560 L400 408 L520 550 L642 428 L760 558 L900 478 L900 700Z" fill="#b1c8d6" />
+          <path d="M0 700 L0 650 L172 558 L320 630 L470 518 L620 620 L760 538 L900 608 L900 700Z" fill="#8eaabb" />
+          <path d="M318 338 L330 318 L343 337 L336 333 L329 345 L324 338Z" fill="#faf6e9" />
+          <path d="M507 324 L520 298 L534 323 L526 318 L519 331 L513 323Z" fill="#faf6e9" />
+          <path d="M718 360 L730 338 L743 360 L736 355 L728 366 L723 358Z" fill="#faf6e9" />
+          <path d="M0 700 L0 668 C180 642 390 664 900 618 L900 700Z" fill="#f7f2e3" opacity="0.9" />
+          <rect x="380" y="620" width="520" height="80" fill="url(#pinos-luz)" />
+          <rect x="480" y="582" width="420" height="64" fill="url(#pinos-luz)" opacity="0.8" />
+        </svg>
+
+        <svg class="grullas" viewBox="0 0 220 160" aria-hidden="true">
+          <g
+            fill="none"
+            stroke="#3d5c6f"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M28 72c14-13 28-13 42 0c14-13 28-13 42 0" />
+            <path d="M64 46c10-9 20-9 30 0c10-9 20-9 30 0" opacity="0.8" />
+            <path d="M124 100c8-7 16-7 24 0c8-7 16-7 24 0" opacity="0.6" />
+          </g>
+        </svg>
+      </div>
+
+      <div class="vineta"></div>
+    </div>
+
+    <main class="escenario">
+      <header class="marca">
+        <div class="kanji" aria-hidden="true">天下</div>
+        <div class="marca-linea">
+          <span>TENKA</span>
+          <span class="sello-cuadrado pequeno" aria-hidden="true">天</span>
+        </div>
+        <p class="subtitulo">The Rōnin Realms</p>
+        <h1 class="solo-lectores">Tenka: The Rōnin Realms</h1>
+      </header>
+
+      <!-- 1. Nombre y PIN -->
+      <section id="pantalla-inicio" class="panel-inicio panel-papel">
+        <form id="form-inicio" novalidate>
+          <label class="campo" for="nombre">
+            <span>Name</span>
+            <input
+              class="entrada-papel"
+              id="nombre"
+              name="nombre"
+              type="text"
+              autocomplete="username"
+              maxlength="24"
+              required
+            />
+          </label>
+          <label class="campo" for="pin">
+            <span>PIN</span>
+            <input
+              class="entrada-papel"
+              id="pin"
+              name="pin"
+              type="password"
+              inputmode="numeric"
+              autocomplete="current-password"
+              pattern="[0-9]{4}"
+              maxlength="4"
+              required
+            />
+          </label>
+          <p id="error-inicio" class="error" role="alert"></p>
+          <button id="btn-entrar" class="boton-laca" type="submit">Enter the Realm</button>
+          <p class="nota">A new name begins a new path. Your PIN keeps it yours.</p>
+        </form>
+      </section>
+
+      <!-- 2. Sello del celular -->
+      <section id="pantalla-qr" class="oculto" aria-labelledby="qr-titulo">
+        <div class="pergamino">
+          <div class="pergamino-varilla" aria-hidden="true"></div>
+          <div class="pergamino-cuerpo">
+            <p class="antetitulo">The Crossing</p>
+            <h1 id="qr-titulo">Summon your rōnin<br />from your phone</h1>
+
+            <div class="qr-marco">
+              <img id="qr-imagen" alt="QR code to open Tenka on your phone" width="440" height="440" />
+            </div>
+
+            <ol class="pasos">
+              <li>Open your phone camera</li>
+              <li>Scan the seal</li>
+              <li>Your phone becomes your master's voice</li>
+            </ol>
+
+            <p id="estado-qr" class="estado-qr" role="status">Drawing the seal…</p>
+
+            <div class="acciones-qr">
+              <button id="btn-nuevo-sello" class="boton-tinta" type="button">New seal</button>
+              <button id="btn-volver" class="boton-texto oculto" type="button">Back</button>
+              <button id="btn-salir" class="boton-texto" type="button">Sign out</button>
+            </div>
+          </div>
+          <div class="pergamino-varilla" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <!-- 3. El rōnin ya despertó -->
+      <section id="pantalla-ronin" class="oculto" aria-labelledby="ronin-titulo">
+        <div class="panel-ronin panel-papel">
+          <div class="estandarte">
+            <svg class="kamon-grande" viewBox="0 0 100 100" aria-hidden="true">
+              <use id="ronin-kamon" href="/arte/kamon.svg#kamon-grulla"></use>
+            </svg>
+          </div>
+          <p class="antetitulo">The oath is spoken</p>
+          <h1 id="ronin-titulo">Your rōnin has awakened</h1>
+          <p id="ronin-detalle" class="ronin-detalle"></p>
+          <div class="ronin-muestra">
+            <span><i id="muestra-kimono" class="punto-color"></i><b id="muestra-kimono-texto"></b></span>
+            <span><i id="muestra-faja" class="punto-color"></i><b id="muestra-faja-texto"></b></span>
+            <span id="muestra-camino"></span>
+          </div>
+          <div class="acciones">
+            <button id="btn-emparejar" class="boton-tinta" type="button">Link a phone</button>
+          </div>
+        </div>
+      </section>
+
+      <p class="lema">Light or Shadow.<br />Your rōnin builds while you sleep.</p>
+      <p id="pie-sesion" class="pie-sesion oculto" role="status"></p>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/pc.js"></script>
+  </body>
+</html>
