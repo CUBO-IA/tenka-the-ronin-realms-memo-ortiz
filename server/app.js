@@ -1,3 +1,4 @@
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -41,10 +42,72 @@ function emitirAUsuario(app, usuarioId, evento, datos) {
   io.to(`usuario:${usuarioId}`).emit(evento, datos);
 }
 
+// El QR no puede apuntar a localhost: el celular lo abriría en su propia memoria.
+// Si la computadora se abrió como localhost, se usa la IP de la red local.
+function prioridadDeInterfaz(nombre) {
+  if (nombre === 'en0') return 0;
+  if (nombre === 'en1') return 1;
+  if (nombre === 'eth0') return 2;
+  if (/^(utun|bridge|awdl|llw|tun|tap|gif|stf)/i.test(nombre)) return 9;
+  return 5;
+}
+
+export function ipLocal() {
+  const redes = os.networkInterfaces();
+  const nombres = Object.keys(redes).sort(
+    (a, b) => prioridadDeInterfaz(a) - prioridadDeInterfaz(b) || a.localeCompare(b),
+  );
+
+  for (const nombre of nombres) {
+    for (const info of redes[nombre] || []) {
+      if (info.family !== 'IPv4' || info.internal) continue;
+      if (info.address.startsWith('169.254.')) continue;
+      return info.address;
+    }
+  }
+  return null;
+}
+
+export function esHostLocal(host = '') {
+  let nombre = String(host).toLowerCase();
+  try {
+    nombre = new URL(`http://${nombre}`).hostname;
+  } catch {
+    // Si no se puede leer, se compara el texto tal cual.
+  }
+  return nombre === 'localhost' || nombre === '127.0.0.1' || nombre === '::1' || nombre === '[::1]';
+}
+
+function puertoDe(host) {
+  try {
+    return new URL(`http://${host}`).port;
+  } catch {
+    return '';
+  }
+}
+
+export function basePublica({
+  protocolo = 'http',
+  host = '',
+  urlPublica: configurada = process.env.URL_PUBLICA,
+  ip = ipLocal(),
+} = {}) {
+  const limpia = String(configurada || '').trim().replace(/\/+$/, '');
+  if (limpia) return limpia;
+
+  if (esHostLocal(host) && ip) {
+    const puerto = puertoDe(host);
+    return `${protocolo}://${ip}${puerto ? `:${puerto}` : ''}`;
+  }
+
+  return `${protocolo}://${host}`;
+}
+
 function urlPublica(req) {
-  const configurada = String(process.env.URL_PUBLICA || '').trim().replace(/\/+$/, '');
-  if (configurada) return configurada;
-  return `${req.protocol}://${req.get('host')}`;
+  return basePublica({
+    protocolo: req.protocol,
+    host: req.get('host') || '',
+  });
 }
 
 function sesionDe(req, tipo) {
