@@ -645,19 +645,20 @@ export class EscenaSantuario extends Phaser.Scene {
   dibujarBarras() {
     if (!this.barras) return;
     this.barras.clear();
-    const pintar = (sprite, vida) => {
+    const pintar = (sprite, vida, alto) => {
       if (!sprite) return;
       const ancho = 170;
       const x = sprite.x - ancho / 2;
-      const y = sprite.y - sprite.displayHeight - 36;
+      const y = sprite.y - sprite.displayHeight - alto;
       const fraccion = Math.max(0, vida / this.vidaMax);
       this.barras.fillStyle(0x1d1c1a, 0.75);
       this.barras.fillRoundedRect(x - 3, y - 3, ancho + 6, 20, 5);
       this.barras.fillStyle(fraccion > 0.5 ? 0x2a8a48 : fraccion > 0.25 ? 0xc86820 : 0x9e2b25, 1);
       this.barras.fillRoundedRect(x, y, Math.max(4, ancho * fraccion), 14, 4);
     };
-    pintar(this.atacanteSprite, this.vidaA);
-    pintar(this.roninSprite, this.vidaD);
+    // Una barra más arriba que la otra, porque pelean pegados.
+    pintar(this.atacanteSprite, this.vidaA, 64);
+    pintar(this.roninSprite, this.vidaD, 36);
   }
 
   aplicarGolpe(golpe) {
@@ -667,8 +668,13 @@ export class EscenaSantuario extends Phaser.Scene {
     const golpeado = golpe.quien === 'atacante' ? this.roninSprite : this.atacanteSprite;
     const golpeador = golpe.quien === 'atacante' ? this.atacanteSprite : this.roninSprite;
     if (golpeado) {
-      golpeado.setTintFill(0xffffff);
-      this.time.delayedCall(90, () => golpeado.active && golpeado.clearTint());
+      golpeado.setTint(0xffffff);
+      if (golpeado.setTintMode && Phaser.TintModes) golpeado.setTintMode(Phaser.TintModes.FILL);
+      this.time.delayedCall(90, () => {
+        if (!golpeado.active) return;
+        golpeado.clearTint();
+        if (golpeado.setTintMode && Phaser.TintModes) golpeado.setTintMode(Phaser.TintModes.NORMAL);
+      });
       this.tweens.add({ targets: golpeado, x: golpeado.x + (golpe.quien === 'atacante' ? 14 : -14), duration: 80, yoyo: true });
     }
     if (golpeador) this.tweens.add({ targets: golpeador, scaleX: golpeador.scaleX * 1.08, scaleY: golpeador.scaleY * 1.08, duration: 90, yoyo: true });
