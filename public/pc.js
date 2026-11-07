@@ -1,5 +1,7 @@
 // Pantalla de la computadora. Solo muestra y pide; la verdad está en el servidor.
 
+import { aplicarKamon, cargarPiezas, pintarRonin } from '/recolorear.js';
+
 const $ = (selector) => document.querySelector(selector);
 
 const pantallas = {
@@ -31,6 +33,7 @@ let vistaActual = 'inicio';
 let venceSello = 0;
 let relojSello = null;
 let pidiendoSello = false;
+let tokenRonin = 0;
 
 async function api(ruta, opciones = {}) {
   const respuesta = await fetch(ruta, {
@@ -158,8 +161,8 @@ function mostrarRonin() {
   const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
   const faja = catalogo?.fajas?.find((elemento) => elemento.id === ronin.faja);
 
-  $('#ronin-kamon').setAttribute('href', `/arte/kamon.svg#kamon-${ronin.kamon}`);
   document.body.dataset.bando = ronin.bando;
+  aplicarKamon($('#ronin-kamon'), ronin.kamon);
   $('#ronin-titulo').textContent = `${ronin.nombre} has awakened`;
   $('#ronin-detalle').textContent = `The ${ronin.bandoEtiqueta} path is yours. Your rōnin waits for your command on the phone.`;
 
@@ -172,6 +175,16 @@ function mostrarRonin() {
   if (usuario) {
     mostrarPie(`Signed in as ${usuario.nombre} · Your rōnin waits for your voice`);
   }
+
+  const token = ++tokenRonin;
+  cargarPiezas(ronin.bando, ronin.tocado)
+    .then((dibujo) => {
+      if (token !== tokenRonin) return;
+      pintarRonin($('#ronin-lienzo'), dibujo, kimono?.color, faja?.color);
+    })
+    .catch(() => {
+      // Si el sprite no carga, la tarjeta sigue mostrando el resto.
+    });
 }
 
 function conectarSocket() {
