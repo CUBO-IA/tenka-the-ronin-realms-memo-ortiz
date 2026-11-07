@@ -210,34 +210,55 @@ export function efectosDeEdificios(db, ronin) {
   return total;
 }
 
-export function fuerzaDefensaPropia(db, ronin) {
+// De dónde sale cada fuerza, para que el rōnin pueda explicar la batalla.
+export function desgloseDefensa(db, ronin, conAliados = true) {
   const c = conf();
   const terminados = obtenerEdificios(db, ronin.id).filter((e) => e.etapa === 'terminado').length;
-  let fuerza = c.defensaBase + ronin.era * c.porEra + terminados * c.porEdificioTerminado;
-  fuerza += efectosDeEdificios(db, ronin).defensa;
+  const efectos = efectosDeEdificios(db, ronin);
+  let tropas = 0;
   for (const [tipo, cantidad] of Object.entries(tropasDe(db, ronin.id))) {
-    fuerza += (c.tropas[tipo]?.defensa || 0) * cantidad;
+    tropas += (c.tropas[tipo]?.defensa || 0) * cantidad;
   }
-  return fuerza;
+  // La defensa del aliado se cuenta sin sus propios aliados, para no girar en círculo.
+  let aliados = 0;
+  if (conAliados) {
+    for (const aliadoId of aliadosDe(db, ronin.id)) {
+      const aliado = filaRonin(db, aliadoId);
+      if (aliado) aliados += fuerzaDefensaPropia(db, aliado) * c.aliadoPorcentaje;
+    }
+  }
+  return {
+    base: c.defensaBase,
+    era: ronin.era * c.porEra,
+    edificios: terminados * c.porEdificioTerminado,
+    murallas: efectos.defensa,
+    tropas,
+    aliados,
+  };
+}
+
+export function desgloseAtaque(db, ronin) {
+  const c = conf();
+  let tropas = 0;
+  for (const [tipo, cantidad] of Object.entries(tropasDe(db, ronin.id))) {
+    tropas += (c.tropas[tipo]?.ataque || 0) * cantidad;
+  }
+  return { base: c.ataqueBase, era: ronin.era * c.porEra, forja: efectosDeEdificios(db, ronin).ataque, tropas };
+}
+
+const sumar = (desglose) => Object.values(desglose).reduce((a, b) => a + b, 0);
+
+export function fuerzaDefensaPropia(db, ronin) {
+  const d = desgloseDefensa(db, ronin, false);
+  return d.base + d.era + d.edificios + d.murallas + d.tropas;
 }
 
 export function fuerzaDefensa(db, ronin) {
-  let fuerza = fuerzaDefensaPropia(db, ronin);
-  for (const aliadoId of aliadosDe(db, ronin.id)) {
-    const aliado = filaRonin(db, aliadoId);
-    if (aliado) fuerza += fuerzaDefensaPropia(db, aliado) * conf().aliadoPorcentaje;
-  }
-  return fuerza;
+  return sumar(desgloseDefensa(db, ronin));
 }
 
 export function fuerzaAtaque(db, ronin) {
-  const c = conf();
-  let fuerza = c.ataqueBase + ronin.era * c.porEra;
-  fuerza += efectosDeEdificios(db, ronin).ataque;
-  for (const [tipo, cantidad] of Object.entries(tropasDe(db, ronin.id))) {
-    fuerza += (c.tropas[tipo]?.ataque || 0) * cantidad;
-  }
-  return fuerza;
+  return sumar(desgloseAtaque(db, ronin));
 }
 
 // null si se puede atacar; si no, el motivo en inglés.
@@ -315,8 +336,11 @@ export function resolverBatalla(db, atacante, defensorId, ahora = Date.now(), al
   const defensor = filaRonin(db, defensorId);
   if (!defensor) return null;
 
-  const ataque = azar(fuerzaAtaque(db, atacante), aleatorio());
-  const defensa = azar(fuerzaDefensa(db, defensor), aleatorio());
+  const desglose = { ataque: desgloseAtaque(db, atacante), defensa: desgloseDefensa(db, defensor) };
+  const ataqueBruto = sumar(desglose.ataque);
+  const defensaBruta = sumar(desglose.defensa);
+  const ataque = azar(ataqueBruto, aleatorio());
+  const defensa = azar(defensaBruta, aleatorio());
   const ganaAtacante = ataque > defensa;
   const botin = {};
   let edificioDanado = null;
@@ -366,6 +390,9 @@ export function resolverBatalla(db, atacante, defensorId, ahora = Date.now(), al
     usuarioDefensor: defensor.usuario_id,
     ataque,
     defensa,
+    ataqueBruto,
+    defensaBruta,
+    desglose,
     ganador: ganaAtacante ? 'atacante' : 'defensor',
     botin,
     edificioDanado,
@@ -374,20 +401,86 @@ export function resolverBatalla(db, atacante, defensorId, ahora = Date.now(), al
   };
 }
 
+// Las últimas batallas del rōnin, para que recuerde y aprenda.
+export function historialDeBatallas(db, roninId, limite = 3) {
+  return db
+    .prepare(
+      `SELECT b.atacante, b.defensor, b.ataque, b.defensa, b.resultado, b.hora,
+              ra.nombre AS nombreAtacante, rd.nombre AS nombreDefensor
+       FROM batallas b
+       JOIN ronin ra ON ra.id = b.atacante
+       JOIN ronin rd ON rd.id = b.defensor
+       WHERE b.atacante = ? OR b.defensor = ?
+       ORDER BY b.id DESC LIMIT ?`,
+    )
+    .all(roninId, roninId, limite)
+    .map((b) => ({
+      papel: b.atacante === roninId ? 'atacante' : 'defensor',
+      contra: b.atacante === roninId ? b.nombreDefensor : b.nombreAtacante,
+      ganamos: (b.atacante === roninId) === (b.resultado === 'atacante'),
+      ataque: b.ataque,
+      defensa: b.defensa,
+      hora: b.hora,
+    }));
+}
+
+// El factor que más pesó del otro lado, en palabras del rōnin.
+function mayorFactor(desglose, etiquetas) {
+  // Las etiquetas van en orden de utilidad: ante empate gana lo que se puede cambiar.
+  let mejor = null;
+  for (const clave of Object.keys(etiquetas)) {
+    const valor = desglose[clave] || 0;
+    if (valor <= 0) continue;
+    if (!mejor || valor > mejor.valor) mejor = { clave, valor };
+  }
+  return mejor ? etiquetas[mejor.clave] : null;
+}
+
+const FACTORES_DEFENSA = {
+  murallas: 'their walls and towers',
+  aliados: 'their allies',
+  tropas: 'their troops',
+  edificios: 'their finished buildings',
+  era: 'their era',
+};
+const FACTORES_ATAQUE = { tropas: 'their troops', forja: 'their forge', era: 'their era' };
+
+// Consejo concreto según lo que falta, elegido entre lo que el rōnin puede hacer.
+function consejoDeAtaque(desglose, bando) {
+  const tropa = bando === 'sombra' ? 'oni' : 'samurai';
+  const fragua = bando === 'sombra' ? 'cauldron' : 'forge';
+  if (!desglose.ataque.tropas) return `Next time we march with ${tropa}: train two before we return.`;
+  if (!desglose.ataque.forja) return `Our blades need the ${fragua}: finish it and our strike grows.`;
+  return `More ${tropa}, or an ally whose thread tips the balance, and we return stronger.`;
+}
+
+function consejoDeDefensa(desglose, bando) {
+  const muro = bando === 'sombra' ? 'thorn wall' : 'palisade';
+  const vigia = bando === 'sombra' ? 'spirit lantern' : 'watchtower';
+  if (!desglose.defensa.murallas) return `Raise the ${muro} and the ${vigia}: walls hold what blades cannot.`;
+  if (!desglose.defensa.tropas) return `A few trained warriors at the gate would turn the next raid.`;
+  if (!desglose.defensa.aliados) return `A red thread with another clan would lend us their walls.`;
+  return 'We are strong; keep the sanctuary whole and the shield will buy us time.';
+}
+
 // Textos predefinidos del resultado, para los dos maestros.
 export function textosDeBatalla(resultado) {
-  const { atacante, defensor, ganador, botin, edificioDanado } = resultado;
+  const { atacante, defensor, ganador, botin, edificioDanado, desglose, ataque, defensa } = resultado;
   const saqueo = Object.entries(botin)
     .map(([tipo, n]) => `${n} ${tipo}`)
     .join(', ');
+  const marcador = `(${Math.round(ataque)} against ${Math.round(defensa)})`;
+  const factorDefensa = desglose ? mayorFactor(desglose.defensa, FACTORES_DEFENSA) : null;
+  const factorAtaque = desglose ? mayorFactor(desglose.ataque, FACTORES_ATAQUE) : null;
+
   if (ganador === 'atacante') {
     return {
-      atacante: `Master, ${defensor.nombre}'s gate fell. We return with ${saqueo || 'nothing but honor'}${edificioDanado ? ` and their ${edificioDanado.tipo} lies in ruins` : ''}. — ${inicialDe(atacante)}.`,
-      defensor: `Master, our sanctuary was raided by ${atacante.nombre}. They took ${saqueo || 'nothing'}${edificioDanado ? `; the ${edificioDanado.tipo} must be rebuilt` : ''}. A shield guards us for now. — ${inicialDe(defensor)}.`,
+      atacante: `Master, ${defensor.nombre}'s gate fell ${marcador}. We return with ${saqueo || 'nothing but honor'}${edificioDanado ? ` and their ${edificioDanado.tipo} lies in ruins` : ''}. ${factorAtaque ? `What won it: ${factorAtaque.replace('their', 'our')}.` : ''} They will be shielded for a while; let us grow before they rebuild. — ${inicialDe(atacante)}.`,
+      defensor: `Master, ${atacante.nombre} raided our sanctuary ${marcador}. They took ${saqueo || 'nothing'}${edificioDanado ? `; the ${edificioDanado.tipo} must be rebuilt` : ''}. ${factorAtaque ? `What beat us: ${factorAtaque}.` : ''} ${desglose ? consejoDeDefensa(desglose, defensor.bando) : ''} A shield guards us for now. — ${inicialDe(defensor)}.`,
     };
   }
   return {
-    atacante: `Master, ${defensor.nombre}'s walls held. We retreat, bruised but alive. — ${inicialDe(atacante)}.`,
-    defensor: `Master, ${atacante.nombre} struck our gate and was driven back. The sanctuary stands. — ${inicialDe(defensor)}.`,
+    atacante: `Master, ${defensor.nombre}'s walls held ${marcador}. We retreat, bruised but alive. ${factorDefensa ? `What stopped us: ${factorDefensa}.` : ''} ${desglose ? consejoDeAtaque(desglose, atacante.bando) : ''} — ${inicialDe(atacante)}.`,
+    defensor: `Master, ${atacante.nombre} struck our gate and was driven back ${marcador}. ${factorDefensa ? `What held: ${factorDefensa.replace('their', 'our')}.` : ''} ${desglose ? consejoDeDefensa(desglose, defensor.bando) : ''} — ${inicialDe(defensor)}.`,
   };
 }

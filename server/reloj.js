@@ -139,7 +139,18 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
     let nuevoMensaje;
     if (batalla) {
       const textos = textosDeBatalla(batalla);
-      nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'fin_batalla', tarea, { batalla: textos.atacante });
+      nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'fin_batalla', tarea, {
+        batalla: {
+          parte: textos.atacante,
+          resultado: batalla.ganador === 'atacante' ? 'we won' : 'we lost',
+          contra: batalla.defensor.nombre,
+          marcador: { ataque: batalla.ataque, defensa: batalla.defensa },
+          desglose: batalla.desglose,
+          botin: batalla.botin,
+          edificio_danado: batalla.edificioDanado?.tipo || null,
+          tropas_perdidas: batalla.tropasPerdidas,
+        },
+      });
       const mensajeDefensor = guardarMensaje(db, batalla.defensor.id, textos.defensor, []);
       if (io) {
         const salaDefensor = `usuario:${batalla.usuarioDefensor}`;

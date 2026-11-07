@@ -10,6 +10,7 @@ import {
   resolverBatalla,
   tropasDe,
 } from '../server/conflicto.js';
+import * as conflicto from '../server/conflicto.js';
 import { accionesValidas, ejecutarOrden } from '../server/ordenes.js';
 import { avanzarMundo } from '../server/reloj.js';
 import { reglas } from '../server/reglas.js';
@@ -124,6 +125,27 @@ describe('conflicto: alianzas, tropas y ataques', () => {
     assert.equal(obtenerRecursos(db, ryo.id).arroz, antes.arroz - resultado.botin.arroz);
     assert.equal(obtenerEdificios(db, ryo.id)[0].etapa, 'construccion');
     assert.equal(resultado.edificioDanado.tipo, 'choza');
+  });
+
+  test('el parte de guerra explica qué decidió la pelea y aconseja', () => {
+    const { db, hana, ryo, fila, subirEra } = mundoDePrueba();
+    subirEra(hana.id, 2);
+    subirEra(ryo.id, 2);
+    db.prepare("INSERT INTO edificios (ronin_id, tipo, etapa, progreso, creado, actualizado) VALUES (?, 'muro', 'terminado', 100, 1, 1)").run(ryo.id);
+    // Azar fijo: el atacante al mínimo, el defensor al máximo.
+    const dados = [0, 1, 0];
+    const resultado = resolverBatalla(db, fila(hana.id), ryo.id, 9000, () => dados.shift() ?? 0);
+    assert.equal(resultado.ganador, 'defensor');
+    assert.equal(resultado.desglose.defensa.murallas, 10);
+    const { textosDeBatalla, historialDeBatallas } = conflicto;
+    const textos = textosDeBatalla(resultado);
+    assert.match(textos.atacante, /What stopped us: their walls/);
+    assert.match(textos.atacante, /train two/);
+    assert.match(textos.defensor, /What held: our walls/);
+    const historial = historialDeBatallas(db, hana.id);
+    assert.equal(historial.length, 1);
+    assert.equal(historial[0].contra, 'Ryo');
+    assert.equal(historial[0].ganamos, false);
   });
 
   test('la defensa suma parte de la de los aliados', () => {
