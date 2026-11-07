@@ -196,6 +196,7 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
         });
       }
       io.to(sala).emit('mensaje:nuevo', { mensaje: nuevoMensaje });
+      if (nuevaEra) io.to(sala).emit('era:nueva', { era: roninActualizado.era, nombre: roninActualizado.nombre });
       if (typeof io.emit === 'function') io.emit('mundo:ronin', { ronin: resumenPorId(db, ronin.id) });
     }
 

@@ -286,6 +286,7 @@ document.addEventListener('click', (evento) => {
   if (objetivo.id === 'btn-bandeja') abrirBandeja();
   if (objetivo.id === 'btn-cerrar-bandeja') $('#bandeja').classList.add('oculto');
   if (objetivo.id === 'btn-cerrar-batalla') $('#tarjeta-batalla').classList.add('oculto');
+  if (objetivo.id === 'btn-cerrar-era') $('#tarjeta-era').classList.add('oculto');
   if (objetivo.id === 'btn-cerrar-instalar') {
     localStorage.setItem(estaInstalada() ? 'tenka-avisos-no' : 'tenka-instalar-no', '1');
     renderTarjetaInstalar();
@@ -608,6 +609,24 @@ function conectarSocketMovil() {
       recursosActuales = datos.recursos;
       renderRecursos();
     }
+  });
+
+  // Se terminó una era: felicitación y qué se abre ahora.
+  socket.on('era:nueva', (datos) => {
+    if (!datos?.era) return;
+    const nombre = datos.nombre || roninActual?.nombre || 'Your rōnin';
+    $('#era-antetitulo').textContent = `Era ${datos.era - 1} complete`;
+    $('#era-titulo').textContent = datos.era >= 3 ? 'The village is whole' : 'Well done, Master';
+    $('#era-detalle').textContent =
+      datos.era >= 3
+        ? `${nombre} has raised the whole village. Era 3 begins: a fortress with a name the island will remember.`
+        : `${nombre} lit the altar flame. The mist lifts: the island can see your sanctuary now.`;
+    $('#era-extra').textContent =
+      datos.era >= 3
+        ? 'Keep your walls high and your allies close.'
+        : 'Era 2 opens the village: train troops, raise the terraces, forge and walls, offer alliances, and raid other sanctuaries for resources.';
+    $('#tarjeta-era').classList.remove('oculto');
+    avisarMensajeNuevo();
   });
 
   // Mi rōnin peleó: la tarjeta de victoria o derrota, antes del parte en el chat.
