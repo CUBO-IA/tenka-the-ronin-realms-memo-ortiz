@@ -374,6 +374,9 @@ export function crearApp({ db }) {
 
       const resultado = ejecutarOrden(db, ronin.id, req.body);
       avisarAOtros(app, resultado);
+      if (resultado.salida) {
+        emitirAUsuario(app, sesion.usuarioId, 'mensaje:nuevo', { mensaje: resultado.salida, salida: true });
+      }
       emitirAUsuario(app, sesion.usuarioId, 'ronin:actualizado', {
         ronin: resultado.ronin,
       });

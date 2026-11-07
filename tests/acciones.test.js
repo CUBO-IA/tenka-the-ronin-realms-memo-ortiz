@@ -88,9 +88,11 @@ describe('lista cerrada de acciones y validación con zod', () => {
     );
 
     assert.equal(res.ronin.estado, 'construyendo');
+    // El costo se paga mientras trabaja, no al dar la orden.
     const despuesRecursos = obtenerRecursos(db, ronin.id);
-    assert.equal(despuesRecursos.cedro, antesRecursos.cedro - 15);
-    assert.equal(despuesRecursos.piedra, antesRecursos.piedra - 10);
+    assert.equal(despuesRecursos.cedro, antesRecursos.cedro);
+    const tarea = JSON.parse(res.ronin.tarea);
+    assert.deepEqual(tarea.costo, { cedro: 15, piedra: 10 });
 
     const ed = edificioPorTipo(db, ronin.id, 'casa');
     assert.ok(ed);

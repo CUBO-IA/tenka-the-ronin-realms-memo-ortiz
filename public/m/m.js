@@ -517,6 +517,14 @@ const ETIQUETA_EDIFICIO = {
   choza: "Rōnin's Shack",
   pozo: 'Well of Mist',
   circulo: 'Circle of Stones',
+  terrazas: 'Rice Terraces',
+  forja: 'Forge',
+  empalizada: 'Palisade',
+  torre: 'Watchtower',
+  huerto: 'Mushroom Grove',
+  caldero: 'Ritual Cauldron',
+  muro: 'Thorn Wall',
+  farol: 'Spirit Lantern',
 };
 
 // Orden fijo de la tira de recursos: materiales del bando, arroz y mon.
@@ -552,6 +560,10 @@ function conectarSocketMovil() {
 
   socket.on('mensaje:nuevo', (datos) => {
     if (!datos?.mensaje) return;
+    if (datos.salida || datos.mensaje.de === 'maestro') {
+      agregarAlHilo(datos.mensaje);
+      return;
+    }
     mensajeActual = datos.mensaje;
     renderMensajeYComandos();
     avisarMensajeNuevo();
@@ -654,6 +666,50 @@ function actualizarEstadoTarea() {
   }
 }
 
+// El hilo: lo que dijo el rōnin y lo que dijo el maestro, en orden.
+let hilo = [];
+
+function agregarAlHilo(mensaje) {
+  if (!mensaje || hilo.some((m) => m.id === mensaje.id)) return;
+  hilo.push(mensaje);
+  hilo.sort((a, b) => a.id - b.id);
+  if (hilo.length > 40) hilo = hilo.slice(-40);
+  renderHilo();
+}
+
+function renderHilo() {
+  const lista = $('#hilo');
+  if (!lista) return;
+  lista.innerHTML = '';
+  for (const m of hilo) {
+    const item = document.createElement('li');
+    const esMaestro = m.de === 'maestro';
+    item.className = esMaestro ? 'maestro' : 'ronin';
+    if (!esMaestro && m.opciones?.length === 0 && m.respondido) item.classList.add('salida');
+    item.innerHTML = `${escapar(m.texto)}<span class="hora">${esMaestro ? 'You' : roninActual?.nombre || 'Rōnin'} · ${tiempoRelativo(m.creado)}</span>`;
+    lista.append(item);
+  }
+  lista.scrollTop = lista.scrollHeight;
+}
+
+function mostrarPensando(si) {
+  $('#pensando')?.classList.toggle('oculto', !si);
+  if (si) {
+    const lista = $('#hilo');
+    if (lista) lista.scrollTop = lista.scrollHeight;
+  }
+}
+
+async function cargarHilo() {
+  try {
+    const datos = await api('/api/mensajes');
+    hilo = [...datos.mensajes].reverse().slice(-40);
+    renderHilo();
+  } catch {
+    // Sin historial, el hilo arranca con el último mensaje.
+  }
+}
+
 function renderMensajeYComandos() {
   const textoMensaje = $('#texto-mensaje');
   const lista = $('#lista-opciones');
@@ -661,6 +717,7 @@ function renderMensajeYComandos() {
 
   if (mensajeActual?.texto) {
     textoMensaje.textContent = mensajeActual.texto;
+    agregarAlHilo(mensajeActual);
   }
 
   lista.innerHTML = '';
@@ -675,11 +732,13 @@ function renderMensajeYComandos() {
     btn.textContent = op.etiqueta || op.accion;
     btn.addEventListener('click', async () => {
       for (const b of $$('.boton-opcion')) b.disabled = true;
+      agregarAlHilo({ id: Date.now() + 0.5, de: 'maestro', texto: op.etiqueta || op.accion, creado: Date.now() });
       try {
         const respuesta = await api('/api/acciones', {
           method: 'POST',
           body: JSON.stringify(op),
         });
+        if (respuesta.salida) agregarAlHilo(respuesta.salida);
         if (respuesta.ronin) {
           roninActual = respuesta.ronin;
           actualizarEstadoTarea();
@@ -689,7 +748,7 @@ function renderMensajeYComandos() {
           renderRecursos();
         }
       } catch (err) {
-        alert(err.message || 'Could not execute order.');
+        agregarAlHilo({ id: Date.now() + 0.7, de: 'ronin', texto: err.message || 'I could not do that, master.', creado: Date.now(), opciones: [], respondido: true });
         actualizarEstadoTarea();
       }
     });
@@ -713,6 +772,7 @@ function mostrarOrdenes(datos) {
   actualizarEstadoTarea();
   renderMensajeYComandos();
 
+  cargarHilo();
   noLeidos = Number(datos.noLeidos || 0);
   renderContador();
   renderTarjetaInstalar();
@@ -736,17 +796,22 @@ formOrdenLibre?.addEventListener('submit', async (e) => {
   const btn = $('#btn-enviar-orden');
   btn.disabled = true;
   respuestaOrdenLibre.classList.add('oculto');
+  agregarAlHilo({ id: Date.now() + 0.5, de: 'maestro', texto, creado: Date.now() });
+  entradaOrdenLibre.value = '';
+  mostrarPensando(true);
 
   try {
     const res = await api('/api/orden-texto', {
       method: 'POST',
       body: JSON.stringify({ texto }),
     });
-    // El rōnin contesta en su pergamino; si la orden se ejecutó, el estado cambia.
+    mostrarPensando(false);
+    // El rōnin contesta en el hilo; si fue una orden, el estado cambia.
     if (res.mensaje) {
       mensajeActual = res.mensaje;
       renderMensajeYComandos();
     }
+    if (res.salida) agregarAlHilo(res.salida);
     if (res.ronin) {
       roninActual = res.ronin;
       actualizarEstadoTarea();
@@ -755,16 +820,16 @@ formOrdenLibre?.addEventListener('submit', async (e) => {
       recursosActuales = res.recursos;
       renderRecursos();
     }
-    respuestaOrdenLibre.textContent = res.ejecutada
-      ? `Order understood: ${res.accion?.etiqueta || res.accion?.accion}.`
-      : res.ocupado
-        ? 'Your rōnin is busy. He will listen when the task is done.'
-        : res.mensaje?.texto || 'The rōnin heard your order.';
-    respuestaOrdenLibre.classList.remove('oculto');
-    entradaOrdenLibre.value = '';
+    if (res.ejecutada) {
+      respuestaOrdenLibre.textContent = `Order understood: ${res.accion?.etiqueta || res.accion?.accion}.`;
+      respuestaOrdenLibre.classList.remove('oculto');
+    } else if (res.ocupado && res.accion) {
+      respuestaOrdenLibre.textContent = 'Your rōnin is busy. He will take that order when the task is done.';
+      respuestaOrdenLibre.classList.remove('oculto');
+    }
   } catch (err) {
-    respuestaOrdenLibre.textContent = err.message || 'Could not send order.';
-    respuestaOrdenLibre.classList.remove('oculto');
+    mostrarPensando(false);
+    agregarAlHilo({ id: Date.now() + 0.7, de: 'ronin', texto: err.message || 'The wind took your words, master. Say it again.', creado: Date.now(), opciones: [], respondido: true });
   } finally {
     btn.disabled = false;
   }

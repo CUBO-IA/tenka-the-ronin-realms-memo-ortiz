@@ -2,12 +2,49 @@ import { edificioPorTipo, obtenerRecursos } from './acciones.js';
 import { mensajeDelRonin } from './agente.js';
 import { enviarPush } from './push.js';
 import { resumenPorId } from './mundo.js';
-import { resolverBatalla, sumarTropa, textosDeBatalla } from './conflicto.js';
-import { guardarMensaje, obtenerEdificios } from './acciones.js';
+import { efectosDeEdificios, resolverBatalla, sumarTropa, textosDeBatalla } from './conflicto.js';
+import { cobrarConstruccion, guardarMensaje, obtenerEdificios } from './acciones.js';
 import { reglas } from './reglas.js';
 import { serializarRonin } from './ronin.js';
 
+// Los aldeanos trabajan solos: cada tanto suman lo que produce su edificio.
+let ultimaProduccion = 0;
+
+export function producir(db, io = null, ahora = Date.now()) {
+  if (ahora - ultimaProduccion < reglas.produccion.cadaMs) return [];
+  ultimaProduccion = ahora;
+  const producidos = [];
+  for (const ronin of db.prepare('SELECT * FROM ronin WHERE era >= 2').all()) {
+    const efectos = efectosDeEdificios(db, ronin);
+    const entradas = Object.entries(efectos.produce);
+    if (!entradas.length) continue;
+    for (const [recurso, cantidad] of entradas) {
+      db.prepare(
+        `INSERT INTO recursos (ronin_id, tipo, cantidad) VALUES (?, ?, ?)
+         ON CONFLICT(ronin_id, tipo) DO UPDATE SET cantidad = cantidad + excluded.cantidad`,
+      ).run(ronin.id, recurso, cantidad);
+    }
+    const recursos = obtenerRecursos(db, ronin.id);
+    producidos.push({ roninId: ronin.id, recursos });
+    if (io) io.to(`usuario:${ronin.usuario_id}`).emit('recursos:actualizados', { recursos });
+  }
+  return producidos;
+}
+
+// Mientras construye, el costo se descuenta poco a poco y se ve bajar.
+export function cobrarConstrucciones(db, io = null, ahora = Date.now()) {
+  const construyendo = db
+    .prepare("SELECT * FROM ronin WHERE estado = 'construyendo' AND tarea IS NOT NULL")
+    .all();
+  for (const ronin of construyendo) {
+    const recursos = cobrarConstruccion(db, ronin, Math.min(ahora, ronin.tarea_fin || ahora));
+    if (recursos && io) io.to(`usuario:${ronin.usuario_id}`).emit('recursos:actualizados', { recursos });
+  }
+}
+
 export async function avanzarMundo(db, io = null, ahora = Date.now()) {
+  producir(db, io, ahora);
+  cobrarConstrucciones(db, io, ahora);
   const pendientes = db
     .prepare('SELECT * FROM ronin WHERE tarea IS NOT NULL AND tarea_fin <= ?')
     .all(ahora);
@@ -44,6 +81,14 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
           ).run(def.cantidad, ronin.id, recurso);
         }
       } else if (tarea.accion === 'construir') {
+        // Lo que falte del costo se paga al terminar, y la etapa deja su recompensa.
+        cobrarConstruccion(db, ronin, tarea.fin || ahora);
+        for (const [recurso, cantidad] of Object.entries(reglas.recompensaPorEtapa || {})) {
+          db.prepare(
+            `INSERT INTO recursos (ronin_id, tipo, cantidad) VALUES (?, ?, ?)
+             ON CONFLICT(ronin_id, tipo) DO UPDATE SET cantidad = cantidad + excluded.cantidad`,
+          ).run(ronin.id, recurso, cantidad);
+        }
         const tipo = tarea.parametros?.edificio;
         const ed = edificioPorTipo(db, ronin.id, tipo);
         if (ed) {
@@ -57,12 +102,14 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
 
           // Con los cuatro edificios de la era 1 terminados, se enciende la
           // llama: era 2, y la niebla se levanta en el mapa.
-          if (ronin.era === 1) {
-            const terminados = obtenerEdificios(db, ronin.id).filter((e) => e.etapa === 'terminado').length;
-            if (terminados >= 4) {
-              db.prepare('UPDATE ronin SET era = 2 WHERE id = ?').run(ronin.id);
-              nuevaEra = true;
-            }
+          const terminados = obtenerEdificios(db, ronin.id).filter((e) => e.etapa === 'terminado').length;
+          if (ronin.era === 1 && terminados >= 4) {
+            db.prepare('UPDATE ronin SET era = 2 WHERE id = ?').run(ronin.id);
+            nuevaEra = true;
+          } else if (ronin.era === 2 && terminados >= 8) {
+            // La aldea completa: era 3, la fortaleza.
+            db.prepare('UPDATE ronin SET era = 3 WHERE id = ?').run(ronin.id);
+            nuevaEra = true;
           }
         }
       } else if (tarea.accion === 'entrenar') {

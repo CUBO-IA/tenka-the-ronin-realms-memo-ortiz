@@ -838,6 +838,144 @@ def extraer_animaciones() -> None:
 
 
 
+# --------------------------------------------------------------------------
+# Era 2: edificios y aldeanos, recortados por filas
+# --------------------------------------------------------------------------
+
+# Cada fila de la hoja trae varias piezas sobre el mismo fondo gris. Se
+# separan por los huecos de columnas vacías, de izquierda a derecha.
+def _piezas_de_fila(hoja: Image.Image, banda: tuple, hueco_min: int = 24, alto_min: float = 0.35) -> list:
+    x0, y0, x1, y1 = banda
+    recorte = hoja.crop((x0, y0, x1, y1))
+    rgb = np.asarray(recorte).astype(np.int16)
+
+    def admite(c: np.ndarray) -> bool:
+        saturacion = int(c.max() - c.min())
+        brillo = float(c.mean())
+        return saturacion < 26 and 130 <= brillo <= 244
+
+    fondo = _fondo_desde_bordes(rgb, tolerancia=14, admite=admite, devuelve=_bordes(recorte.width, recorte.height))
+    fondo = _limpiar_halo(rgb, fondo, pasadas=3, saturacion_max=28, brillo_min=125, brillo_max=244)
+    contenido = ~fondo
+    columnas = contenido.any(axis=0)
+
+    piezas = []
+    inicio = None
+    vacias = 0
+    for x in range(recorte.width + 1):
+        ocupada = x < recorte.width and bool(columnas[x])
+        if ocupada:
+            if inicio is None:
+                inicio = x
+            vacias = 0
+        elif inicio is not None:
+            vacias += 1
+            if vacias >= hueco_min or x == recorte.width:
+                fin = x - vacias + 1
+                pieza = _rgba(recorte.crop((inicio, 0, fin, recorte.height)), fondo[:, inicio:fin])
+                pieza = _quitar_rotulos(_recortar_contenido(pieza, margen=1))
+                # Los títulos de la hoja son bajitos: fuera.
+                if pieza.height >= recorte.height * alto_min:
+                    piezas.append(pieza)
+                inicio = None
+                vacias = 0
+    return piezas
+
+
+EDIFICIOS_ERA2 = {
+    # hoja, banda (x0, y0, x1, y1), nombres de las tres etapas en orden
+    "luz": [
+        ("edificios-luz-era2.png", (480, 30, 2752, 400), "terrazas"),
+        ("edificios-luz-era2.png", (480, 400, 2752, 780), "forja"),
+        ("edificios-luz-era2.png", (480, 780, 2752, 1060), "empalizada"),
+        ("edificios-luz-era2.png", (480, 1060, 2752, 1510), "torre"),
+    ],
+    "sombra": [
+        ("edificios-sombra-era2.png", (440, 130, 2752, 440), "huerto"),
+        ("edificios-sombra-era2.png", (440, 440, 2752, 830), "caldero"),
+        ("edificios-sombra-era2.png", (440, 830, 2752, 1150), "muro"),
+        ("edificios-sombra-era2.png", (440, 1150, 2752, 1530), "farol"),
+    ],
+}
+
+ALDEANOS = [
+    # hoja, banda, [(nombre, cantidad de cuadros), ...] en el orden de la fila
+    ("sprites-aldeanos-era2.png", (340, 90, 2752, 410), [("luz-granjero-caminar", 4), ("luz-granjero-sembrar", 2)]),
+    ("sprites-aldeanos-era2.png", (340, 420, 1500, 790), [("luz-herrero", 4)]),
+    ("sprites-aldeanos-era2.png", (340, 850, 2752, 1165), [("sombra-recolector", 4)]),
+    ("sprites-aldeanos-era2.png", (340, 1170, 2752, 1530), [("sombra-alquimista", 4), ("sombra-espectro", 4)]),
+]
+
+# Los guardias llevan lanza y se tocan entre sí: van con cajas fijas.
+ALDEANOS_FIJOS = [
+    ("sprites-aldeanos-era2.png", "luz-guardia-0", (1640, 420, 1895, 790)),
+    ("sprites-aldeanos-era2.png", "luz-guardia-1", (1900, 420, 2150, 790)),
+    ("sprites-aldeanos-era2.png", "luz-guardia-2", (2160, 420, 2420, 790)),
+    ("sprites-aldeanos-era2.png", "luz-guardia-3", (2425, 420, 2700, 790)),
+]
+
+ALTO_ALDEANO = 220
+LIENZO_ALDEANO = (200, 240)
+
+
+def extraer_era2() -> None:
+    print("Edificios de la Era 2")
+    hojas: dict[str, Image.Image] = {}
+
+    def hoja(nombre):
+        if nombre not in hojas:
+            hojas[nombre] = abrir(ARTE / nombre)
+        return hojas[nombre]
+
+    for bando, filas in EDIFICIOS_ERA2.items():
+        for nombre_hoja, banda, tipo in filas:
+            piezas = _piezas_de_fila(hoja(nombre_hoja), banda)
+            if len(piezas) != 3:
+                print(f"  ⚠ {bando}/{tipo}: esperaba 3 piezas y hay {len(piezas)}")
+            for etapa, pieza in zip(("cimientos", "construccion", "terminado"), piezas):
+                escala = min(1.0, 440 / max(1, pieza.width), 340 / max(1, pieza.height))
+                _guardar(pieza, f"edificio-{bando}-{tipo}-{etapa}.png", escala=escala)
+
+    # El muro de espinas terminado tiene su propia hoja corregida.
+    muro = _piezas_de_fila(hoja("edificios-sombra-era2-muro-terminado.png"), (0, 100, 2752, 1250))
+    if muro:
+        pieza = max(muro, key=lambda im: im.width * im.height)
+        escala = min(1.0, 440 / max(1, pieza.width), 340 / max(1, pieza.height))
+        _guardar(pieza, "edificio-sombra-muro-terminado.png", escala=escala)
+
+    print("Aldeanos de la Era 2")
+    for nombre_hoja, nombre, caja in ALDEANOS_FIJOS:
+        piezas = _piezas_de_fila(hoja(nombre_hoja), caja, hueco_min=200)
+        if not piezas:
+            print(f"  ⚠ {nombre}: no se encontró el cuadro")
+            continue
+        pieza = max(piezas, key=lambda im: im.width * im.height)
+        escala = ALTO_ALDEANO / pieza.height
+        pieza = pieza.resize((max(1, round(pieza.width * escala)), ALTO_ALDEANO), Image.Resampling.NEAREST)
+        lienzo = Image.new("RGBA", LIENZO_ALDEANO, (0, 0, 0, 0))
+        lienzo.alpha_composite(pieza, ((LIENZO_ALDEANO[0] - pieza.width) // 2, LIENZO_ALDEANO[1] - 10 - pieza.height))
+        _guardar(lienzo, f"aldeano-{nombre}.png")
+
+    for nombre_hoja, banda, grupos in ALDEANOS:
+        piezas = _piezas_de_fila(hoja(nombre_hoja), banda, hueco_min=16)
+        esperadas = sum(n for _, n in grupos)
+        if len(piezas) != esperadas:
+            print(f"  ⚠ fila {banda}: esperaba {esperadas} cuadros y hay {len(piezas)}")
+        indice = 0
+        for nombre, cantidad in grupos:
+            for i in range(cantidad):
+                if indice >= len(piezas):
+                    break
+                pieza = piezas[indice]
+                indice += 1
+                escala = ALTO_ALDEANO / pieza.height
+                pieza = pieza.resize((max(1, round(pieza.width * escala)), ALTO_ALDEANO), Image.Resampling.NEAREST)
+                lienzo = Image.new("RGBA", LIENZO_ALDEANO, (0, 0, 0, 0))
+                lienzo.alpha_composite(pieza, ((LIENZO_ALDEANO[0] - pieza.width) // 2, LIENZO_ALDEANO[1] - 10 - pieza.height))
+                _guardar(lienzo, f"aldeano-{nombre}-{i}.png")
+    print()
+
+
 def main() -> None:
     if "--solo-mascaras" in sys.argv:
         solo_mascaras()
@@ -847,6 +985,9 @@ def main() -> None:
         return
     if "--solo-fondos" in sys.argv:
         extraer_fondos()
+        return
+    if "--solo-era2" in sys.argv:
+        extraer_era2()
         return
 
     print(f"Origen: {ARTE}")
@@ -859,6 +1000,7 @@ def main() -> None:
     extraer_iconos()
     extraer_sprites()
     extraer_edificios()
+    extraer_era2()
     extraer_animaciones()
 
     print("Listo. Revisá public/assets/ antes de cambiar el CSS.")

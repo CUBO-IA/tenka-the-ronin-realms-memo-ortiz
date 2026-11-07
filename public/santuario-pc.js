@@ -41,18 +41,27 @@ const ETIQUETA_EDIFICIO = {
   choza: "Rōnin's Shack",
   pozo: 'Well of Mist',
   circulo: 'Circle of Stones',
+  terrazas: 'Rice Terraces',
+  forja: 'Forge',
+  empalizada: 'Palisade',
+  torre: 'Watchtower',
+  huerto: 'Mushroom Grove',
+  caldero: 'Ritual Cauldron',
+  muro: 'Thorn Wall',
+  farol: 'Spirit Lantern',
 };
 
 let juego = null;
 let relojTarea = null;
 let estadoActual = { ronin: null, recursos: {}, edificios: [], mensaje: null, colores: {} };
 
+// Solo la escena que está en pantalla recibe actualizaciones.
 function escena() {
-  return juego?.scene?.getScene('Santuario') || null;
+  return juego?.scene?.isActive('Santuario') ? juego.scene.getScene('Santuario') : null;
 }
 
 function escenaMapa() {
-  return juego?.scene?.getScene('Mapa') || null;
+  return juego?.scene?.isActive('Mapa') ? juego.scene.getScene('Mapa') : null;
 }
 
 let modo = 'propio';

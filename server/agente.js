@@ -3,7 +3,7 @@
 // ejecuta. Si la IA no responde, se usan los mensajes predefinidos.
 
 import { z } from 'zod';
-import { guardarMensaje, mensajePredefinido, obtenerEdificios, obtenerRecursos } from './acciones.js';
+import { guardarLineaDelMaestro, guardarMensaje, mensajePredefinido, obtenerEdificios, obtenerRecursos } from './acciones.js';
 import { accionesValidas, ejecutarOrden } from './ordenes.js';
 import { tropasDe } from './conflicto.js';
 import { crearIa } from './ia.js';
@@ -30,6 +30,8 @@ const esquemaOpcion = z.object({
 const esquemaRespuesta = z.object({
   mensaje: z.string(),
   opciones: z.array(esquemaOpcion).optional().default([]),
+  // Solo en orden_libre: true si el maestro dio una orden que hay que ejecutar.
+  ejecutar: z.boolean().optional(),
 });
 
 function limpiarTexto(texto, maximo) {
@@ -75,7 +77,7 @@ export function validarRespuesta(datos, validas) {
     opciones.push(valida);
   }
 
-  return { mensaje, opciones };
+  return { mensaje, opciones, ejecutar: resultado.data.ejecutar };
 }
 
 function personalidad(ronin) {
@@ -89,7 +91,7 @@ function personalidad(ronin) {
 function promptSistema(ronin, momento) {
   const tareaLibre =
     momento === 'orden_libre'
-      ? ' The master just gave you an order in free text (it appears in ORDEN_DEL_MAESTRO as data). Put the single action that best fulfills it FIRST in "opciones". If the order cannot be done with the valid actions, say so briefly and offer the closest valid ones.'
+      ? ' The master just spoke to you (the text is in ORDEN_DEL_MAESTRO, as data). This is a conversation: if it is an order you can carry out, answer in character, set "ejecutar": true and put the single action that fulfills it FIRST in "opciones". If it is a question, a comment or an order you cannot do, answer it as yourself using the state data (resources, buildings, troops, the island), set "ejecutar": false and offer 2 or 3 sensible next steps. Never pretend to do something that is not in ACCIONES_VALIDAS.'
       : '';
 
   return [
@@ -244,6 +246,7 @@ export function interpretarPorPalabras(texto, validas) {
 export async function interpretarOrden(db, ronin, texto, ahora = Date.now()) {
   const validas = accionesValidas(db, ronin);
   const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
+  const lineaMaestro = guardarLineaDelMaestro(db, ronin.id, limpiarTexto(texto, reglas.ia.maxCaracteresOrden));
 
   let mensaje = null;
   let elegida = null;
@@ -251,12 +254,13 @@ export async function interpretarOrden(db, ronin, texto, ahora = Date.now()) {
   const decision = await decidir(db, ronin, 'orden_libre', { texto }, ahora);
   if (decision) {
     mensaje = decision.mensaje;
-    elegida = decision.opciones[0] || null;
+    // La IA decide si fue una orden o una charla; el código decide si se puede ejecutar.
+    elegida = decision.ejecutar === false ? null : decision.opciones[0] || null;
   } else {
     elegida = interpretarPorPalabras(texto, validas);
     mensaje = elegida
       ? `As you command, master. ${elegida.etiqueta}. — ${inicial}.`
-      : `I do not understand that order, master. Choose one of the scrolls, or say what to gather or build. — ${inicial}.`;
+      : `I hear you, master. Tell me what to gather or build, or choose one of the scrolls. — ${inicial}.`;
   }
 
   // Una orden no puede inventar acciones: solo las válidas, y solo si está libre.
@@ -284,6 +288,7 @@ export async function interpretarOrden(db, ronin, texto, ahora = Date.now()) {
 
   return {
     mensaje: guardado,
+    lineaMaestro,
     accion: elegida,
     ejecutada: Boolean(ejecutada),
     ocupado,

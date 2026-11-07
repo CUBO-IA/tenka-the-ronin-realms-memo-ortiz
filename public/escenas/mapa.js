@@ -4,9 +4,11 @@
 
 const COLOR_BANDO = { luz: 0x2b3a67, sombra: 0x5b3d7a };
 const EDIFICIOS = {
-  luz: ['casa', 'granero', 'torii', 'altar'],
-  sombra: ['choza', 'pozo', 'circulo', 'altar'],
+  luz: ['casa', 'granero', 'torii', 'altar', 'terrazas', 'forja', 'empalizada', 'torre'],
+  sombra: ['choza', 'pozo', 'circulo', 'altar', 'huerto', 'caldero', 'muro', 'farol'],
 };
+// En el mapa manda el edificio más importante que esté terminado.
+const PESO = { torre: 9, farol: 9, forja: 8, caldero: 8, casa: 7, choza: 7, altar: 6, torii: 5, circulo: 5, granero: 4, pozo: 4, terrazas: 3, huerto: 3, empalizada: 2, muro: 2 };
 const ETAPAS = ['cimientos', 'construccion', 'terminado'];
 
 export class EscenaMapa extends Phaser.Scene {
@@ -113,7 +115,7 @@ export class EscenaMapa extends Phaser.Scene {
     // El edificio más avanzado: el que mejor cuenta cuánto ha construido.
     let mejor = null;
     for (const e of ronin.edificios || []) {
-      const nivel = ETAPAS.indexOf(e.etapa);
+      const nivel = ETAPAS.indexOf(e.etapa) * 10 + (PESO[e.tipo] || 1);
       if (!mejor || nivel > mejor.nivel) mejor = { ...e, nivel };
     }
     return mejor;

@@ -33,20 +33,43 @@ export class EscenaSantuario extends Phaser.Scene {
     // Posiciones en el suelo del santuario según la composición de las maquetas:
     // la casa a la izquierda, el torii a la derecha, el rōnin trabaja en medio.
     const y = this.suelo;
+    // La era 2 va en una segunda fila, más atrás y más chica, y la empalizada
+    // o el muro cierran el frente a la izquierda.
     this.posicionesEdificios = {
       luz: {
         casa: { x: 330, y, escala: 1 },
         granero: { x: 745, y: y - 10, escala: 0.9 },
         altar: { x: 1330, y, escala: 0.9 },
         torii: { x: 1720, y, escala: 1 },
+        terrazas: { x: 560, y: y - 150, escala: 0.62, fondo: true },
+        forja: { x: 1060, y: y - 150, escala: 0.62, fondo: true },
+        torre: { x: 1540, y: y - 150, escala: 0.62, fondo: true },
+        empalizada: { x: 150, y: y + 30, escala: 0.75 },
       },
       sombra: {
         choza: { x: 330, y, escala: 1 },
         pozo: { x: 745, y: y - 10, escala: 0.9 },
         altar: { x: 1330, y, escala: 0.9 },
         circulo: { x: 1720, y, escala: 1 },
+        huerto: { x: 560, y: y - 150, escala: 0.62, fondo: true },
+        caldero: { x: 1060, y: y - 150, escala: 0.62, fondo: true },
+        farol: { x: 1540, y: y - 150, escala: 0.62, fondo: true },
+        muro: { x: 150, y: y + 30, escala: 0.75 },
       },
     };
+
+    // Qué aldeano trae cada edificio de la era 2, y qué hace.
+    this.aldeanosPorEdificio = {
+      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 520, pasea: false },
+      forja: { tipo: 'luz-herrero', cuadros: 4, ritmo: 5, x: 1150, pasea: false },
+      empalizada: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, x: 250, pasea: true },
+      torre: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, x: 1460, pasea: true },
+      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 520, pasea: true },
+      caldero: { tipo: 'sombra-alquimista', cuadros: 4, ritmo: 5, x: 1150, pasea: false },
+      muro: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, x: 250, pasea: true },
+      farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, x: 1460, pasea: true },
+    };
+    this.aldeanos = {};
   }
 
   preload() {
@@ -56,8 +79,16 @@ export class EscenaSantuario extends Phaser.Scene {
     // 2. Edificios de la Era 1 (3 etapas: cimientos, construccion, terminado)
     const edificiosBando =
       this.bando === 'luz'
-        ? ['casa', 'granero', 'torii', 'altar']
-        : ['choza', 'pozo', 'circulo', 'altar'];
+        ? ['casa', 'granero', 'torii', 'altar', 'terrazas', 'forja', 'empalizada', 'torre']
+        : ['choza', 'pozo', 'circulo', 'altar', 'huerto', 'caldero', 'muro', 'farol'];
+
+    // Aldeanos del bando
+    for (const info of Object.values(this.aldeanosPorEdificio)) {
+      if (!info.tipo.startsWith(this.bando)) continue;
+      for (let i = 0; i < info.cuadros; i += 1) {
+        this.load.image(`aldeano_${info.tipo}_${i}`, `/assets/aldeano-${info.tipo}-${i}.png`);
+      }
+    }
 
     for (const tipo of edificiosBando) {
       for (const etapa of ['cimientos', 'construccion', 'terminado']) {
@@ -173,7 +204,7 @@ export class EscenaSantuario extends Phaser.Scene {
       const sprite = this.add.sprite(pos.x, pos.y, 'vacio');
       sprite.setOrigin(0.5, 1);
       sprite.setScale(pos.escala || 1);
-      sprite.setDepth(5);
+      sprite.setDepth(pos.fondo ? 4 : 5);
       sprite.setVisible(false);
       this.edificiosSprites[tipo] = sprite;
     }
@@ -206,7 +237,56 @@ export class EscenaSantuario extends Phaser.Scene {
       } else {
         sprite.setVisible(false);
       }
+      // El aldeano llega cuando su edificio está terminado.
+      const info = this.aldeanosPorEdificio[tipo];
+      if (info) {
+        if (ed?.etapa === 'terminado') this.crearAldeano(tipo, info);
+        else this.quitarAldeano(tipo);
+      }
     }
+  }
+
+  // ---------- Aldeanos ----------
+
+  crearAldeano(tipo, info) {
+    if (this.aldeanos[tipo]) return;
+    const animacion = `aldeano_${info.tipo}`;
+    if (!this.anims.exists(animacion)) {
+      const cuadros = [];
+      for (let i = 0; i < info.cuadros; i += 1) cuadros.push({ key: `aldeano_${info.tipo}_${i}` });
+      this.anims.create({ key: animacion, frames: cuadros, frameRate: info.ritmo, repeat: -1 });
+    }
+    const sprite = this.add.sprite(info.x, this.suelo - 6, `aldeano_${info.tipo}_0`);
+    sprite.setOrigin(0.5, 1);
+    sprite.setScale(0.9);
+    sprite.setDepth(8);
+    sprite.play(animacion);
+    this.aldeanos[tipo] = sprite;
+    if (info.pasea) this.pasear(sprite, info.x);
+  }
+
+  // Los guardias y recolectores van y vienen; los demás trabajan en su sitio.
+  pasear(sprite, centro) {
+    const destino = centro + Phaser.Math.Between(-140, 140);
+    sprite.setFlipX(destino < sprite.x);
+    this.tweens.add({
+      targets: sprite,
+      x: destino,
+      duration: Math.abs(destino - sprite.x) * 12 + 400,
+      ease: 'Linear',
+      onComplete: () => {
+        if (!sprite.active) return;
+        this.time.delayedCall(Phaser.Math.Between(800, 2500), () => {
+          if (sprite.active) this.pasear(sprite, centro);
+        });
+      },
+    });
+  }
+
+  quitarAldeano(tipo) {
+    if (!this.aldeanos[tipo]) return;
+    this.aldeanos[tipo].destroy();
+    delete this.aldeanos[tipo];
   }
 
   hexARgb(color) {
@@ -380,7 +460,7 @@ export class EscenaSantuario extends Phaser.Scene {
       const tipoEdificio = tarea?.parametros?.edificio || 'casa';
       const posEdificio = this.posicionesEdificios[this.bando]?.[tipoEdificio];
       // Se para a la derecha del edificio, mirando hacia él.
-      const targetX = posEdificio ? posEdificio.x + 190 : 1030;
+      const targetX = posEdificio ? Phaser.Math.Clamp(posEdificio.x + 190, 120, 1800) : 1030;
       const targetY = this.suelo;
 
       this.moverRonin(targetX, targetY, () => {

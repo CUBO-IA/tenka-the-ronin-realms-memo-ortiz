@@ -24,6 +24,24 @@ function prepararJuego() {
 }
 
 describe('reloj del mundo y avance de tareas', () => {
+  test('el costo de construir se descuenta poco a poco y la etapa deja recompensa', async () => {
+    const { db, ronin } = prepararJuego();
+    const antes = obtenerRecursos(db, ronin.id);
+    const ahora = 300000;
+    const res = ejecutarAccion(db, ronin.id, { accion: 'construir', parametros: { edificio: 'casa' } }, ahora);
+
+    await avanzarMundo(db, null, ahora + res.duracionMs / 2);
+    const mitad = obtenerRecursos(db, ronin.id);
+    assert.ok(mitad.cedro < antes.cedro && mitad.cedro > antes.cedro - 15, `a mitad: ${mitad.cedro}`);
+
+    await avanzarMundo(db, null, ahora + res.duracionMs + 1);
+    const fin = obtenerRecursos(db, ronin.id);
+    assert.equal(fin.cedro, antes.cedro - 15);
+    assert.equal(fin.piedra, antes.piedra - 10);
+    assert.equal(fin.mon, antes.mon + 4);
+    assert.equal(edificioPorTipo(db, ronin.id, 'casa').progreso, 100);
+  });
+
   test('ignora tareas que aún no han terminado', async () => {
     const { db, ronin } = prepararJuego();
     const ahora = 100000;

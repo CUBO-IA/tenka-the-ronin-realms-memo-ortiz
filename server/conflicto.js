@@ -3,7 +3,7 @@
 
 import { guardarMensaje, obtenerEdificios, obtenerRecursos } from './acciones.js';
 import { ErrorDeJuego } from './errores.js';
-import { reglas, tropasDeBando } from './reglas.js';
+import { infoEdificio, reglas, tropasDeBando } from './reglas.js';
 import { serializarRonin } from './ronin.js';
 
 const conf = () => reglas.conflicto;
@@ -193,10 +193,28 @@ export function responderAlianza(db, ronin, alianzaId, respuesta) {
 
 // ---------- Ataques ----------
 
+// Lo que suman los edificios terminados de la era 2 (forja, muro, torre…).
+export function efectosDeEdificios(db, ronin) {
+  const total = { ataque: 0, defensa: 0, produce: {}, vigia: false };
+  for (const e of obtenerEdificios(db, ronin.id)) {
+    if (e.etapa !== 'terminado') continue;
+    const efecto = infoEdificio(ronin.bando, e.tipo)?.efecto;
+    if (!efecto) continue;
+    total.ataque += efecto.ataque || 0;
+    total.defensa += efecto.defensa || 0;
+    if (efecto.vigia) total.vigia = true;
+    for (const [recurso, n] of Object.entries(efecto.produce || {})) {
+      total.produce[recurso] = (total.produce[recurso] || 0) + n;
+    }
+  }
+  return total;
+}
+
 export function fuerzaDefensaPropia(db, ronin) {
   const c = conf();
   const terminados = obtenerEdificios(db, ronin.id).filter((e) => e.etapa === 'terminado').length;
   let fuerza = c.defensaBase + ronin.era * c.porEra + terminados * c.porEdificioTerminado;
+  fuerza += efectosDeEdificios(db, ronin).defensa;
   for (const [tipo, cantidad] of Object.entries(tropasDe(db, ronin.id))) {
     fuerza += (c.tropas[tipo]?.defensa || 0) * cantidad;
   }
@@ -215,6 +233,7 @@ export function fuerzaDefensa(db, ronin) {
 export function fuerzaAtaque(db, ronin) {
   const c = conf();
   let fuerza = c.ataqueBase + ronin.era * c.porEra;
+  fuerza += efectosDeEdificios(db, ronin).ataque;
   for (const [tipo, cantidad] of Object.entries(tropasDe(db, ronin.id))) {
     fuerza += (c.tropas[tipo]?.ataque || 0) * cantidad;
   }
@@ -264,11 +283,15 @@ export function iniciarAtaque(db, ronin, clanId, ahora = Date.now()) {
     );
   })();
 
-  // La torre o el farol avisan al defensor antes de que llegue el golpe.
+  // La torre o el farol avisan al defensor antes de que llegue el golpe; sin
+  // vigía, el rōnin solo alcanza a ver el polvo en el camino.
+  const vigia = efectosDeEdificios(db, defensor).vigia;
   const aviso = guardarMensaje(
     db,
     defensor.id,
-    `Master, the ${defensor.bando === 'luz' ? 'watchtower' : 'spirit lantern'} warns: ${ronin.nombre} marches against our sanctuary! I will hold the gate. — ${inicialDe(defensor)}.`,
+    vigia
+      ? `Master, the ${defensor.bando === 'luz' ? 'watchtower' : 'spirit lantern'} warns: ${ronin.nombre} marches against our sanctuary! I will hold the gate. — ${inicialDe(defensor)}.`
+      : `Master, dust on the road: ${ronin.nombre} is coming for our sanctuary! I will hold the gate. — ${inicialDe(defensor)}.`,
     [],
   );
   return {

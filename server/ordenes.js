@@ -2,7 +2,7 @@
 // la lista cerrada y la manda a quien la ejecuta (era 1 o conflicto).
 
 import { z } from 'zod';
-import { accionesValidas as accionesEra1, ejecutarAccion } from './acciones.js';
+import { accionesValidas as accionesEra1, ejecutarAccion, guardarLineaDelMaestro, mensajeDeSalida } from './acciones.js';
 import {
   iniciarAtaque,
   iniciarEntrenamiento,
@@ -83,12 +83,18 @@ export function ejecutarOrden(db, roninId, cuerpo, ahora = Date.now()) {
   let duracionMs = 0;
   let batalla = null;
 
+  // Lo que eligió el maestro queda en el hilo, con la etiqueta del botón.
+  const etiqueta = typeof cuerpo?.etiqueta === 'string' ? cuerpo.etiqueta : orden.accion;
+  guardarLineaDelMaestro(db, roninId, etiqueta.slice(0, 80));
+  const serializado = serializarRonin(fila);
+
   switch (orden.accion) {
     case 'recolectar':
     case 'construir':
     case 'descansar': {
       const r = ejecutarAccion(db, roninId, orden, ahora);
-      return { ...r, orden, avisos, batalla: null };
+      const salida = mensajeDeSalida(db, serializado, orden);
+      return { ...r, orden, avisos, batalla: null, salida };
     }
     case 'entrenar': {
       duracionMs = iniciarEntrenamiento(db, fila, orden.parametros.tropa, ahora).duracionMs;
@@ -115,5 +121,6 @@ export function ejecutarOrden(db, roninId, cuerpo, ahora = Date.now()) {
       throw new ErrorDeJuego('That action does not exist.', 400, 'ACCION_INVALIDA');
   }
 
-  return { ...estadoDe(db, roninId), orden, duracionMs, avisos, batalla };
+  const salida = esTarea ? mensajeDeSalida(db, serializado, orden) : null;
+  return { ...estadoDe(db, roninId), orden, duracionMs, avisos, batalla, salida };
 }

@@ -13,10 +13,12 @@ async function jugador(app, nombre, datosRonin) {
 }
 
 describe('la isla y el mapa vivo', () => {
-  test('hay 12 territorios, 6 por bando', () => {
-    assert.equal(TERRITORIOS.length, 12);
-    assert.equal(TERRITORIOS.filter((t) => t.bando === 'luz').length, 6);
-    assert.equal(TERRITORIOS.filter((t) => t.bando === 'sombra').length, 6);
+  test('la isla tiene la misma tierra para cada bando', () => {
+    assert.ok(TERRITORIOS.length >= 12);
+    assert.equal(
+      TERRITORIOS.filter((t) => t.bando === 'luz').length,
+      TERRITORIOS.filter((t) => t.bando === 'sombra').length,
+    );
   });
 
   test('cada rōnin nuevo recibe el primer territorio libre de su bando', async () => {

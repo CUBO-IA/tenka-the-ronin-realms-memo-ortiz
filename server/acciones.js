@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  edificiosDisponibles,
   etapaInfoEdificio,
   infoEdificio,
   recursosDeBando,
@@ -70,7 +71,7 @@ export function edificioPorTipo(db, roninId, tipo) {
 export function ultimoMensaje(db, roninId) {
   const fila = db
     .prepare(
-      'SELECT id, texto, opciones_json, creado, respondido, respuesta FROM mensajes WHERE ronin_id = ? ORDER BY id DESC LIMIT 1',
+      "SELECT id, texto, opciones_json, creado, respondido, respuesta, de FROM mensajes WHERE ronin_id = ? AND de = 'ronin' ORDER BY id DESC LIMIT 1",
     )
     .get(roninId);
   if (!fila) return null;
@@ -87,6 +88,7 @@ export function ultimoMensaje(db, roninId) {
     creado: fila.creado,
     respondido: Boolean(fila.respondido),
     respuesta: fila.respuesta,
+    de: fila.de || 'ronin',
   };
 }
 
@@ -104,7 +106,7 @@ export function accionesValidas(db, ronin) {
   const mapaEdificios = Object.fromEntries(obtenerEdificios(db, ronin.id).map((e) => [e.tipo, e.etapa]));
   const lista = [];
 
-  for (const [tipo, def] of Object.entries(reglas.edificiosEra1[bando] || {})) {
+  for (const [tipo, def] of Object.entries(edificiosDisponibles(bando, ronin.era))) {
     const etapaActual = mapaEdificios[tipo] || null;
     const proxEtapa = siguienteEtapa(etapaActual);
     if (!proxEtapa) continue;
@@ -134,22 +136,53 @@ export function accionesValidas(db, ronin) {
   return lista;
 }
 
-export function guardarMensaje(db, roninId, texto, opciones, proveedor = 'predefinido') {
+export function guardarMensaje(db, roninId, texto, opciones, proveedor = 'predefinido', de = 'ronin') {
   const ahora = Date.now();
+  const esMaestro = de === 'maestro';
   const info = db
     .prepare(
-      'INSERT INTO mensajes (ronin_id, texto, opciones_json, creado, respondido) VALUES (?, ?, ?, ?, 0)',
+      'INSERT INTO mensajes (ronin_id, texto, opciones_json, creado, respondido, leido, de) VALUES (?, ?, ?, ?, ?, ?, ?)',
     )
-    .run(roninId, texto, JSON.stringify(opciones), ahora);
+    .run(roninId, texto, JSON.stringify(opciones), ahora, esMaestro ? 1 : 0, esMaestro ? 1 : 0, de);
   return {
     id: Number(info.lastInsertRowid),
     texto,
     opciones,
     creado: ahora,
-    respondido: false,
+    respondido: esMaestro,
     respuesta: null,
+    leido: esMaestro,
+    de,
     proveedor,
   };
+}
+
+// Lo que dijo el maestro también queda en el hilo.
+export function guardarLineaDelMaestro(db, roninId, texto) {
+  return guardarMensaje(db, roninId, texto, [], 'maestro', 'maestro');
+}
+
+// Al arrancar una tarea el rōnin avisa qué va a hacer: instantáneo, sin IA.
+const SALIDAS = {
+  recolectar: ['On my way to gather {r}, master.', 'I go for the {r}. Back soon.', 'The {r}, then. I will not be long.'],
+  construir: ['I take up the tools: the {e} will rise.', 'To the {e}, master. Stone by stone.', 'Working on the {e} now.'],
+  descansar: ['I will rest a while by the fire.', 'A short rest, master. Then we continue.'],
+  entrenar: ['Training a {t}. The sanctuary will be stronger by nightfall.', 'A new {t} joins us soon, master.'],
+  atacar: ['We march at once, master. Keep the lantern lit.', 'The road is long; the blade is ready. We march.'],
+};
+
+export function mensajeDeSalida(db, ronin, tarea) {
+  const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
+  const lista = SALIDAS[tarea?.accion] || ['As you command, master.'];
+  const frase = lista[Math.floor(Math.random() * lista.length)];
+  const recurso = reglas.recoleccion[tarea?.parametros?.recurso]?.etiqueta?.toLowerCase() || 'resources';
+  const edificio = infoEdificio(ronin.bando, tarea?.parametros?.edificio)?.etiqueta || 'sanctuary';
+  const tropa = reglas.conflicto.tropas[tarea?.parametros?.tropa]?.etiqueta?.toLowerCase() || 'warrior';
+  const texto = `${frase.replace('{r}', recurso).replace('{e}', edificio).replace('{t}', tropa)} — ${inicial}.`;
+  const mensaje = guardarMensaje(db, ronin.id, texto, []);
+  db.prepare('UPDATE mensajes SET respondido = 1 WHERE id = ?').run(mensaje.id);
+  mensaje.respondido = true;
+  return mensaje;
 }
 
 // Mensaje sin IA para cada momento: inicio o fin de una tarea.
@@ -158,9 +191,11 @@ export function mensajePredefinido(db, ronin, momento, tarea = null) {
   if (momento === 'nueva_era') {
     const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
     const texto =
-      ronin.bando === 'sombra'
-        ? `Master, the dark flame burns. The mist lifts from our land: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`
-        : `Master, the altar flame is lit. The fog lifts from our sanctuary: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`;
+      ronin.era >= 3
+        ? `Master, the village is whole. Era ${ronin.era} begins: our sanctuary is a fortress now, and the island will remember our name. — ${inicial}.`
+        : ronin.bando === 'sombra'
+          ? `Master, the dark flame burns. The mist lifts from our land: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`
+          : `Master, the altar flame is lit. The fog lifts from our sanctuary: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`;
     return guardarMensaje(db, ronin.id, texto, generarOpciones(db, ronin));
   }
   return crearMensajeInicial(db, ronin);
@@ -170,7 +205,7 @@ export function mensajePredefinido(db, ronin, momento, tarea = null) {
 export function listarMensajes(db, roninId, limite = 20) {
   return db
     .prepare(
-      'SELECT id, texto, opciones_json, creado, respondido, respuesta, leido FROM mensajes WHERE ronin_id = ? ORDER BY id DESC LIMIT ?',
+      'SELECT id, texto, opciones_json, creado, respondido, respuesta, leido, de FROM mensajes WHERE ronin_id = ? ORDER BY id DESC LIMIT ?',
     )
     .all(roninId, limite)
     .map((fila) => {
@@ -188,12 +223,13 @@ export function listarMensajes(db, roninId, limite = 20) {
         respondido: Boolean(fila.respondido),
         respuesta: fila.respuesta,
         leido: Boolean(fila.leido),
+        de: fila.de || 'ronin',
       };
     });
 }
 
 export function contarNoLeidos(db, roninId) {
-  return db.prepare('SELECT COUNT(*) AS n FROM mensajes WHERE ronin_id = ? AND leido = 0').get(roninId).n;
+  return db.prepare("SELECT COUNT(*) AS n FROM mensajes WHERE ronin_id = ? AND leido = 0 AND de = 'ronin'").get(roninId).n;
 }
 
 export function marcarLeidos(db, roninId) {
@@ -207,7 +243,7 @@ export function generarOpciones(db, ronin) {
   const mapaEdificios = Object.fromEntries(edificiosActuales.map((e) => [e.tipo, e.etapa]));
 
   const opciones = [];
-  const catalogoEdificios = reglas.edificiosEra1[bando] || {};
+  const catalogoEdificios = edificiosDisponibles(bando, ronin.era);
 
   // 1. Opciones de construcción viables
   for (const [tipo, def] of Object.entries(catalogoEdificios)) {
@@ -289,6 +325,44 @@ export function crearMensajeInicial(db, ronin) {
   };
 }
 
+// Varias voces por momento, para que el rōnin no se repita cuando la IA no alcanza.
+const VOCES = {
+  luz: {
+    recolectar: [
+      'The {r} is gathered and stacked. What is our next step, master?',
+      'Snow on my shoulders, {r} on my back. I await your word, master.',
+      'The {r} is stored. The cedars watched me work in silence, master.',
+    ],
+    construir: [
+      'Work on the {e} is complete. Shall we continue building, master?',
+      'The {e} stands a little taller today. What next, master?',
+      'My hands ache, but the {e} is done. Your command, master.',
+    ],
+    entrenar: ['A new {t} has joined our ranks, master. The sanctuary is stronger.'],
+    descansar: ['I am rested and ready for your command, master.', 'The fire warmed me. I am ready, master.'],
+  },
+  sombra: {
+    recolectar: [
+      'The {r} is gathered from the marshes. What shall we claim next, master?',
+      'The mist gave up its {r}. Tell me where to reach next, master.',
+      'The {r} is ours. The lights in the swamp followed me home, master.',
+    ],
+    construir: [
+      'The {e} rises through the dark mist. What shall we summon next?',
+      'The {e} is done. The willows bow to it, master.',
+      'Another stone for the {e}. Our shadow grows, master.',
+    ],
+    entrenar: ['A {t} answers our call, master. The marsh has one more guardian.'],
+    descansar: ['The spirits whisper while we pause. Give me purpose, master.', 'I rested among the lanterns. Command me, master.'],
+  },
+};
+
+function vozAlAzar(bando, momento, datos) {
+  const lista = VOCES[bando]?.[momento] || VOCES.luz[momento] || ['I await your command, master.'];
+  const frase = lista[Math.floor(Math.random() * lista.length)];
+  return frase.replace('{r}', datos.r || 'resources').replace('{e}', datos.e || 'sanctuary').replace('{t}', datos.t || 'warrior');
+}
+
 export function crearMensajeFinTarea(db, ronin, tarea) {
   const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
   const bando = ronin.bando;
@@ -296,23 +370,15 @@ export function crearMensajeFinTarea(db, ronin, tarea) {
 
   if (tarea.accion === 'recolectar') {
     const defRec = reglas.recoleccion[tarea.parametros?.recurso];
-    const etiqueta = defRec ? defRec.etiqueta.toLowerCase() : 'resources';
-    texto =
-      bando === 'sombra'
-        ? `The ${etiqueta} is gathered from the marshes. What shall we claim next, master? — ${inicial}.`
-        : `The ${etiqueta} is gathered and stacked. What is our next step, master? — ${inicial}.`;
+    texto = `${vozAlAzar(bando, 'recolectar', { r: defRec ? defRec.etiqueta.toLowerCase() : 'resources' })} — ${inicial}.`;
   } else if (tarea.accion === 'construir') {
     const defEd = infoEdificio(bando, tarea.parametros?.edificio);
-    const etiqueta = defEd ? defEd.etiqueta : 'structure';
-    texto =
-      bando === 'sombra'
-        ? `The ${etiqueta} rises through the dark mist. What shall we summon next? — ${inicial}.`
-        : `Work on the ${etiqueta} is complete. Shall we continue building, master? — ${inicial}.`;
+    texto = `${vozAlAzar(bando, 'construir', { e: defEd ? defEd.etiqueta : 'structure' })} — ${inicial}.`;
+  } else if (tarea.accion === 'entrenar') {
+    const defTropa = reglas.conflicto.tropas[tarea.parametros?.tropa];
+    texto = `${vozAlAzar(bando, 'entrenar', { t: defTropa ? defTropa.etiqueta.toLowerCase() : 'warrior' })} — ${inicial}.`;
   } else {
-    texto =
-      bando === 'sombra'
-        ? `The spirits whisper while we pause. Give me purpose, master. — ${inicial}.`
-        : `I am rested and ready for your command, master. — ${inicial}.`;
+    texto = `${vozAlAzar(bando, 'descansar', {})} — ${inicial}.`;
   }
 
   const opciones = generarOpciones(db, ronin);
@@ -332,6 +398,37 @@ export function crearMensajeFinTarea(db, ronin, tarea) {
     respondido: false,
     respuesta: null,
   };
+}
+
+// Cobra la parte del costo que corresponde al tiempo transcurrido. Devuelve
+// los recursos nuevos si algo cambió; null si no había nada que cobrar.
+export function cobrarConstruccion(db, ronin, ahora = Date.now()) {
+  let tarea = null;
+  try {
+    tarea = JSON.parse(ronin.tarea);
+  } catch {
+    return null;
+  }
+  if (!tarea || tarea.accion !== 'construir' || !tarea.costo) return null;
+
+  const total = Math.max(1, (tarea.fin || 0) - (tarea.inicio || 0));
+  const fraccion = Math.max(0, Math.min(1, (ahora - (tarea.inicio || 0)) / total));
+  const pagado = { ...(tarea.pagado || {}) };
+  let cambio = false;
+
+  const restar = db.prepare('UPDATE recursos SET cantidad = MAX(0, cantidad - ?) WHERE ronin_id = ? AND tipo = ?');
+  for (const [recurso, costo] of Object.entries(tarea.costo)) {
+    const debe = Math.floor(costo * fraccion);
+    const delta = debe - (pagado[recurso] || 0);
+    if (delta <= 0) continue;
+    restar.run(delta, ronin.id, recurso);
+    pagado[recurso] = debe;
+    cambio = true;
+  }
+  if (!cambio) return null;
+
+  db.prepare('UPDATE ronin SET tarea = ? WHERE id = ?').run(JSON.stringify({ ...tarea, pagado }), ronin.id);
+  return obtenerRecursos(db, ronin.id);
 }
 
 export function ejecutarAccion(db, roninId, cuerpo, ahora = Date.now()) {
@@ -369,10 +466,12 @@ export function ejecutarAccion(db, roninId, cuerpo, ahora = Date.now()) {
     duracionMs = def.duracionMs;
   } else if (datos.accion === 'construir') {
     const tipo = datos.parametros.edificio;
-    const def = infoEdificio(bando, tipo);
+    const def = infoEdificio(bando, tipo, ronin.era);
     if (!def) {
       throw new ErrorDeJuego(
-        `That building is not available for the ${bando} path.`,
+        infoEdificio(bando, tipo)
+          ? 'That building belongs to a later era.'
+          : `That building is not available for the ${bando} path.`,
         400,
         'EDIFICIO_INVALIDO',
       );
@@ -407,17 +506,15 @@ export function ejecutarAccion(db, roninId, cuerpo, ahora = Date.now()) {
     duracionMs = reglas.descanso.duracionMs;
   }
 
+  // La tarea guarda su costo: se va pagando mientras el rōnin trabaja (reloj).
+  const tarea =
+    datos.accion === 'construir'
+      ? { ...datos, costo: costoConstruccion, pagado: {}, inicio: ahora, fin: ahora + duracionMs }
+      : datos;
+
   // Ejecución transaccional
   const ejecutar = db.transaction(() => {
-    // Si construye, descontar recursos al iniciar y crear registro si no existe
     if (datos.accion === 'construir') {
-      const restarRecurso = db.prepare(
-        'UPDATE recursos SET cantidad = cantidad - ? WHERE ronin_id = ? AND tipo = ?',
-      );
-      for (const [rec, cant] of Object.entries(costoConstruccion)) {
-        restarRecurso.run(cant, roninId, rec);
-      }
-
       const edificioExistente = edificioPorTipo(db, roninId, datos.parametros.edificio);
       if (!edificioExistente) {
         db.prepare(
@@ -440,7 +537,7 @@ export function ejecutarAccion(db, roninId, cuerpo, ahora = Date.now()) {
 
     db.prepare(
       'UPDATE ronin SET estado = ?, tarea = ?, tarea_fin = ? WHERE id = ?',
-    ).run(estado, JSON.stringify(datos), ahora + duracionMs, roninId);
+    ).run(estado, JSON.stringify(tarea), ahora + duracionMs, roninId);
 
     // Marcar último mensaje como respondido
     db.prepare(

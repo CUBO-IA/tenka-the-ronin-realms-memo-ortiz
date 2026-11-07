@@ -32,6 +32,10 @@ function migrar(db) {
   if (columnasMensajes.length && !columnasMensajes.includes('leido')) {
     db.exec('ALTER TABLE mensajes ADD COLUMN leido INTEGER NOT NULL DEFAULT 0');
   }
+  // La conversación guarda también lo que dice el maestro.
+  if (columnasMensajes.length && !columnasMensajes.includes('de')) {
+    db.exec("ALTER TABLE mensajes ADD COLUMN de TEXT NOT NULL DEFAULT 'ronin'");
+  }
 }
 
 function crearEsquema(db) {
@@ -114,7 +118,8 @@ function crearEsquema(db) {
       creado INTEGER NOT NULL,
       respondido INTEGER NOT NULL DEFAULT 0,
       respuesta TEXT,
-      leido INTEGER NOT NULL DEFAULT 0
+      leido INTEGER NOT NULL DEFAULT 0,
+      de TEXT NOT NULL DEFAULT 'ronin'
     );
 
     CREATE TABLE IF NOT EXISTS suscripciones_push (

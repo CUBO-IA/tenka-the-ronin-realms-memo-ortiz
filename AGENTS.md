@@ -113,11 +113,11 @@ Las hojas de `arte/piezas/` tienen fondo gris plano y los cuadros no están perf
 
 ## Estado (7 de noviembre de 2026)
 
-Hechos: hitos 1, 2, 3, 4, 5 y 7 (base, santuario, IA, mapa, conversación y avisos, conflicto). Valor de demo en `reglas.js`: las tropas se entrenan desde la era 2 (el diseño las pone en el dojo de la era 3); los ataques van desde la era 2 como dice el diseño.
+Hechos: hitos 1, 2, 3, 4, 5 y 7 (base, santuario, IA, mapa, conversación y avisos, conflicto) y la **era 2 completa** (sus 4 edificios por bando con aldeanos que producen y defienden). Decisiones de juego en `reglas.js`: los recursos de arranque alcanzan para toda la era 1 y cada etapa deja recompensa; en la era 2 los recursos vienen del botín y de los aldeanos; las tropas se entrenan desde la era 2 (el diseño las pone en el dojo de la era 3). El costo de construir se paga poco a poco mientras el rōnin trabaja. La conversación del celular es un hilo: el maestro habla en sus palabras y la IA responde (y ejecuta solo si fue una orden válida).
 
 ## Lo que falta
 
-- [ ] Hito 6: eras 2 y 3 (edificios, aldeanos) y el Mercado del Cruce con conversación entre agentes.
+- [ ] Hito 6: era 3 (edificios, tropas con arte) y el Mercado del Cruce con conversación entre agentes.
 - [ ] Hito 8: ensayo de la demo (red local con hotspot o Cloudflare Tunnel para instalar y avisos).
 - [ ] Recortar las piezas que faltan de `arte/piezas/` (eras 2 y 3, aldeanos, tropas). Las etapas corregidas (`*-castillo-cimientos`, `*-muro-terminado`, `*-muelle-construccion`, `*-altar-terminado`) reemplazan a las de la hoja grande.
 - [ ] Decisiones pendientes de arte: ver `docs/DISENO.md`, sección 9.

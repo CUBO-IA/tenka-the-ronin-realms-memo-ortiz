@@ -78,7 +78,7 @@ describe('conflicto: alianzas, tropas y ataques', () => {
     const ahora = 1000;
     const r = ejecutarOrden(db, hana.id, { accion: 'entrenar', parametros: { tropa: 'samurai' } }, ahora);
     assert.equal(r.ronin.estado, 'entrenando');
-    assert.equal(obtenerRecursos(db, hana.id).arroz, 30 - reglas.conflicto.tropas.samurai.costo.arroz);
+    assert.equal(obtenerRecursos(db, hana.id).arroz, reglas.recursosIniciales.luz.arroz - reglas.conflicto.tropas.samurai.costo.arroz);
     await avanzarMundo(db, null, ahora + r.duracionMs + 1);
     assert.deepEqual(tropasDe(db, hana.id), { samurai: 1 });
     assert.equal(fila(hana.id).estado, 'despierto');
@@ -94,7 +94,7 @@ describe('conflicto: alianzas, tropas y ataques', () => {
     const marcha = ejecutarOrden(db, hana.id, { accion: 'atacar', parametros: { clan: ryo.id } }, ahora);
     assert.equal(marcha.ronin.estado, 'atacando');
     assert.equal(marcha.batalla.defensor.nombre, 'Ryo');
-    assert.match(ultimoMensaje(db, ryo.id).texto, /marches against/);
+    assert.match(ultimoMensaje(db, ryo.id).texto, /is coming for|marches against/);
 
     const eventos = [];
     const ioFalso = { to: () => ({ emit: (n, d) => eventos.push(n) }), emit: (n) => eventos.push(n) };

@@ -92,32 +92,32 @@
             <p class="tiempo-restante oculto" id="tiempo-restante"></p>
           </div>
 
-          <!-- Pergamino del rōnin -->
-          <div class="pergamino-mensaje">
+          <!-- La conversación con el rōnin -->
+          <div class="pergamino-mensaje hilo-marco">
             <p class="antetitulo">The Rōnin Speaks</p>
-            <blockquote id="texto-mensaje" class="texto-mensaje">
-              Master, I have arrived at the sanctuary. What shall I do first?
-            </blockquote>
+            <ol id="hilo" class="hilo" aria-live="polite"></ol>
+            <p id="pensando" class="pensando oculto" aria-live="polite"><span></span><span></span><span></span></p>
+            <blockquote id="texto-mensaje" class="solo-lectores"></blockquote>
           </div>
 
-          <!-- Decisiones / Opciones -->
+          <!-- Sugerencias rápidas: lo que el rōnin propone ahora -->
           <div class="ordenes-opciones">
-            <p class="etiqueta-seccion">Orders</p>
-            <div id="lista-opciones" class="lista-opciones" role="group" aria-label="Available commands"></div>
+            <p class="etiqueta-seccion">He suggests</p>
+            <div id="lista-opciones" class="lista-opciones" role="group" aria-label="Suggested orders"></div>
           </div>
 
-          <!-- Orden libre por texto (preparado para Hito 3) -->
+          <!-- Hablarle en tus palabras -->
           <form id="form-orden-libre" class="form-orden-libre">
             <label class="etiqueta-seccion" for="entrada-orden-libre">
-              Speak an order
+              Speak to your rōnin
             </label>
             <div class="fila-entrada-orden">
               <input
                 type="text"
                 id="entrada-orden-libre"
                 class="entrada-papel"
-                placeholder="Give an order in your voice…"
-                maxlength="120"
+                placeholder="Ask him anything, or give an order…"
+                maxlength="200"
                 autocomplete="off"
               />
               <button type="submit" id="btn-enviar-orden" class="boton-laca boton-enviar-orden">

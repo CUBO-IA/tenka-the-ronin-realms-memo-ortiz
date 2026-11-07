@@ -21,10 +21,14 @@ export const reglas = {
     nombreMin: 2,
     nombreMax: 20,
   },
+  // Alcanzan para toda la era 1 sin recolectar; en la era 2 los recursos
+  // grandes vienen de las batallas y de los aldeanos.
   recursosIniciales: {
-    luz: { cedro: 40, piedra: 30, hierro: 5, arroz: 30, mon: 10 },
-    sombra: { sauce: 40, lodo: 30, hongos: 5, arroz: 30, mon: 10 },
+    luz: { cedro: 240, piedra: 220, hierro: 16, arroz: 40, mon: 10 },
+    sombra: { sauce: 240, lodo: 220, hongos: 16, arroz: 40, mon: 10 },
   },
+  // Cada etapa terminada deja algo en el santuario.
+  recompensaPorEtapa: { mon: 4, arroz: 4 },
   recoleccion: {
     cedro: { cantidad: 15, duracionMs: 4000, etiqueta: 'Cedar wood' },
     piedra: { cantidad: 12, duracionMs: 4000, etiqueta: 'River stone' },
@@ -39,13 +43,104 @@ export const reglas = {
   },
   ia: {
     timeoutMs: 6000,
-    maxPorMinuto: 30, // llamadas totales a la IA por minuto, entre todos los rōnin
+    maxPorMinuto: 14, // llamadas totales por minuto, entre todos los rōnin (el plan gratis de Gemini da 15)
     minIntervaloMs: 3000, // mínimo entre dos llamadas del mismo rōnin
     maxCaracteresMensaje: 240,
     maxCaracteresOrden: 200,
     groqModelo: 'llama-3.3-70b-versatile',
     geminiModelo: 'gemini-3.5-flash-lite',
   },
+  // Era 2 · Aldea. Cada edificio terminado trae un aldeano que trabaja solo.
+  // Efectos: terrazas/huerto producen arroz; forja/caldero suman ataque y
+  // defensa; empalizada/muro y torre/farol suman defensa.
+  edificiosEra2: {
+    luz: {
+      terrazas: {
+        etiqueta: 'Rice Terraces',
+        aldeano: 'granjero',
+        efecto: { produce: { arroz: 6 } },
+        etapas: {
+          cimientos: { costo: { cedro: 20, piedra: 15 }, duracionMs: 5000 },
+          construccion: { costo: { cedro: 25, piedra: 20 }, duracionMs: 7000 },
+          terminado: { costo: { cedro: 30, piedra: 20, arroz: 10 }, duracionMs: 9000 },
+        },
+      },
+      forja: {
+        etiqueta: 'Forge',
+        aldeano: 'herrero',
+        efecto: { ataque: 6, defensa: 4 },
+        etapas: {
+          cimientos: { costo: { piedra: 25, hierro: 2 }, duracionMs: 5000 },
+          construccion: { costo: { cedro: 20, piedra: 25, hierro: 3 }, duracionMs: 7000 },
+          terminado: { costo: { cedro: 25, piedra: 25, hierro: 5 }, duracionMs: 9000 },
+        },
+      },
+      empalizada: {
+        etiqueta: 'Palisade',
+        aldeano: 'guardia',
+        efecto: { defensa: 10 },
+        etapas: {
+          cimientos: { costo: { cedro: 30 }, duracionMs: 5000 },
+          construccion: { costo: { cedro: 35, piedra: 10 }, duracionMs: 7000 },
+          terminado: { costo: { cedro: 40, piedra: 15, hierro: 2 }, duracionMs: 9000 },
+        },
+      },
+      torre: {
+        etiqueta: 'Watchtower',
+        aldeano: 'guardia',
+        efecto: { defensa: 6, vigia: true },
+        etapas: {
+          cimientos: { costo: { cedro: 20, piedra: 20 }, duracionMs: 5000 },
+          construccion: { costo: { cedro: 30, piedra: 20 }, duracionMs: 7000 },
+          terminado: { costo: { cedro: 35, piedra: 25, hierro: 3 }, duracionMs: 9000 },
+        },
+      },
+    },
+    sombra: {
+      huerto: {
+        etiqueta: 'Mushroom Grove',
+        aldeano: 'recolector',
+        efecto: { produce: { arroz: 6 } },
+        etapas: {
+          cimientos: { costo: { sauce: 20, lodo: 15 }, duracionMs: 5000 },
+          construccion: { costo: { sauce: 25, lodo: 20 }, duracionMs: 7000 },
+          terminado: { costo: { sauce: 30, lodo: 20, arroz: 10 }, duracionMs: 9000 },
+        },
+      },
+      caldero: {
+        etiqueta: 'Ritual Cauldron',
+        aldeano: 'alquimista',
+        efecto: { ataque: 6, defensa: 4 },
+        etapas: {
+          cimientos: { costo: { lodo: 25, hongos: 2 }, duracionMs: 5000 },
+          construccion: { costo: { sauce: 20, lodo: 25, hongos: 3 }, duracionMs: 7000 },
+          terminado: { costo: { sauce: 25, lodo: 25, hongos: 5 }, duracionMs: 9000 },
+        },
+      },
+      muro: {
+        etiqueta: 'Thorn Wall',
+        aldeano: 'espectro',
+        efecto: { defensa: 10 },
+        etapas: {
+          cimientos: { costo: { sauce: 30 }, duracionMs: 5000 },
+          construccion: { costo: { sauce: 35, lodo: 10 }, duracionMs: 7000 },
+          terminado: { costo: { sauce: 40, lodo: 15, hongos: 2 }, duracionMs: 9000 },
+        },
+      },
+      farol: {
+        etiqueta: 'Spirit Lantern',
+        aldeano: 'espectro',
+        efecto: { defensa: 6, vigia: true },
+        etapas: {
+          cimientos: { costo: { sauce: 20, lodo: 20 }, duracionMs: 5000 },
+          construccion: { costo: { sauce: 30, lodo: 20 }, duracionMs: 7000 },
+          terminado: { costo: { sauce: 35, lodo: 25, hongos: 3 }, duracionMs: 9000 },
+        },
+      },
+    },
+  },
+  // Producción automática de los aldeanos: cada cuánto suman lo que produce su edificio.
+  produccion: { cadaMs: 10000 },
   // Conflicto. Valores de demo: en el diseño las tropas llegan con el dojo de
   // la era 3; acá se entrenan desde la era 2 para que la pelea se vea en una
   // partida corta. Los ataques van desde la era 2, como dice el diseño.
@@ -169,8 +264,22 @@ export function siguienteEtapa(etapaActual) {
   return null;
 }
 
-export function infoEdificio(bando, edificio) {
-  return reglas.edificiosEra1[bando]?.[edificio] || null;
+// Los edificios que un rōnin puede construir según su era.
+export function edificiosDisponibles(bando, era = 1) {
+  return {
+    ...(reglas.edificiosEra1[bando] || {}),
+    ...(era >= 2 ? reglas.edificiosEra2[bando] || {} : {}),
+  };
+}
+
+export function infoEdificio(bando, edificio, era = 3) {
+  return edificiosDisponibles(bando, era)[edificio] || null;
+}
+
+export function eraDeEdificio(bando, edificio) {
+  if (reglas.edificiosEra1[bando]?.[edificio]) return 1;
+  if (reglas.edificiosEra2[bando]?.[edificio]) return 2;
+  return null;
 }
 
 export function etapaInfoEdificio(bando, edificio, etapa) {

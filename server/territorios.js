@@ -14,6 +14,13 @@ export const TERRITORIOS = [
   { id: 'luz-4', bando: 'luz', nombre: 'Pine Cove', x: 1680, y: 564 },
   { id: 'luz-5', bando: 'luz', nombre: 'South Slope', x: 1200, y: 816 },
   { id: 'luz-6', bando: 'luz', nombre: 'Snow Harbor', x: 1536, y: 768 },
+  // Más tierra para cuando juega toda la clase.
+  { id: 'sombra-7', bando: 'sombra', nombre: 'Crow Cliffs', x: 220, y: 420 },
+  { id: 'sombra-8', bando: 'sombra', nombre: 'Ember Bog', x: 520, y: 860 },
+  { id: 'sombra-9', bando: 'sombra', nombre: 'Hollow Pines', x: 800, y: 480 },
+  { id: 'luz-7', bando: 'luz', nombre: 'White Cape', x: 1820, y: 420 },
+  { id: 'luz-8', bando: 'luz', nombre: 'Glacier Road', x: 1400, y: 880 },
+  { id: 'luz-9', bando: 'luz', nombre: 'Crane Shore', x: 1760, y: 720 },
 ];
 
 export const MERCADO = { id: 'mercado', nombre: 'Crossroads Market', x: 1020, y: 576 };
