@@ -20,6 +20,8 @@ from PIL import Image, ImageFilter
 
 RAIZ = Path(__file__).resolve().parent.parent
 ARTE = RAIZ / "arte" / "piezas"
+# Las piezas sueltas entregadas a mano (por ejemplo el logo final) viven en arte/.
+ARTE_SUELTO = RAIZ / "arte"
 SALIDA = RAIZ / "public" / "assets"
 SALIDA.mkdir(parents=True, exist_ok=True)
 
@@ -221,26 +223,9 @@ def extraer_fondos() -> None:
 def extraer_logo() -> None:
     print("Logo")
 
-    original = abrir(ARTE / "interfaz" / "logo.png")
-    rgb = np.asarray(original).astype(np.int16)
-    saturacion = rgb.max(2) - rgb.min(2)
-    brillo = rgb.mean(2)
-
-    # Cualquier cosa que no sea blanco puro es contenido.
-    contenido = (brillo < 246) | (saturacion > 18)
-    ys, xs = np.where(contenido)
-    caja = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
-    recorte = original.crop(caja)
-
-    rgb = np.asarray(recorte).astype(np.int16)
-    fondo = _fondo_desde_bordes(
-        rgb,
-        tolerancia=10,
-        admite=lambda c: c.mean() > 232 and (c.max() - c.min()) < 24,
-        devuelve=_bordes(recorte.width, recorte.height),
-    )
-    fondo = _limpiar_halo(rgb, fondo, saturacion_max=22, brillo_min=190, brillo_max=255)
-    logo = _recortar_contenido(_rgba(recorte, fondo), margen=2)
+    # El logo final viene limpio y con transparencia desde Illustrator.
+    original = Image.open(ARTE_SUELTO / "Logo_Tenka_FINAL.png").convert("RGBA")
+    logo = _recortar_contenido(original, margen=2)
 
     # El logo completo para la computadora.
     _guardar(logo, "logo.png")
@@ -275,7 +260,6 @@ def extraer_logo() -> None:
         pixeles[~es_rojo, 2] = 216
         _guardar(Image.fromarray(claro, "RGBA"), "logo-kanji-claro.png")
 
-    # Solo la marca de kanjis, por si hace falta en otro lado.
     print()
 
 
