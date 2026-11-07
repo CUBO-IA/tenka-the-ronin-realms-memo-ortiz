@@ -4,3 +4,4 @@ tenka.db-shm
 tenka.db-wal
 .env
 .DS_Store
+respaldos/
