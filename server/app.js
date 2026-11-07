@@ -12,7 +12,7 @@ import { ejecutarOrden } from './ordenes.js';
 import { enviarPush } from './push.js';
 import { borrarSuscripcion, guardarSuscripcion, llavesVapid } from './push.js';
 import { resumenMundo, resumenPorId, santuarioDe } from './mundo.js';
-import { alianzasActivas } from './conflicto.js';
+import { alianzasActivas, tropasDe } from './conflicto.js';
 import { asignarTerritoriosFaltantes } from './territorios.js';
 import { ErrorDeJuego } from './errores.js';
 import { crearRonin, roninDeUsuario } from './ronin.js';
@@ -290,6 +290,7 @@ export function crearApp({ db }) {
         ? {
             recursos: obtenerRecursos(db, ronin.id),
             edificios: obtenerEdificios(db, ronin.id),
+            tropas: tropasDe(db, ronin.id),
             mensaje: mensajeActual(db, ronin),
           }
         : {}),
@@ -333,6 +334,7 @@ export function crearApp({ db }) {
           ? {
               recursos: obtenerRecursos(db, ronin.id),
               edificios: obtenerEdificios(db, ronin.id),
+              tropas: tropasDe(db, ronin.id),
               mensaje: mensajeActual(db, ronin),
               noLeidos: contarNoLeidos(db, ronin.id),
             }
@@ -398,7 +400,10 @@ export function crearApp({ db }) {
   app.get(
     '/api/mundo',
     ruta((req, res) => {
-      exigirSesion(req, ESTADOS.computadora);
+      // La computadora lo dibuja; el celular lo usa para elegir a quién atacar o aliarse.
+      if (!req.sesionComputadora && !req.sesionMovil) {
+        throw new ErrorDeJuego('Sign in first.', 401, 'SIN_SESION');
+      }
       res.json(resumenMundo(db));
     }),
   );

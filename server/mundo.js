@@ -67,6 +67,7 @@ export function santuarioDe(db, roninId) {
   return {
     ronin: { ...ronin, tarea: null, tareaFin: null },
     edificios: obtenerEdificios(db, roninId),
+    tropas: tropasDe(db, roninId),
     territorio: territorioPorId(fila.territorio),
   };
 }

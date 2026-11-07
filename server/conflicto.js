@@ -5,6 +5,7 @@ import { guardarMensaje, obtenerEdificios, obtenerRecursos } from './acciones.js
 import { ErrorDeJuego } from './errores.js';
 import { infoEdificio, reglas, tropasDeBando } from './reglas.js';
 import { serializarRonin } from './ronin.js';
+import { territorioPorId } from './territorios.js';
 
 const conf = () => reglas.conflicto;
 
@@ -132,7 +133,8 @@ export function opcionesDeAlianza(db, ronin) {
       objetivo: otro.nombre,
     });
   }
-  for (const otro of otrosRonin(db, ronin)) {
+  const cercanos = otrosRonin(db, ronin).sort((a, b) => distanciaEntre(ronin, a) - distanciaEntre(ronin, b)).slice(0, 6);
+  for (const otro of cercanos) {
     if (alianzaEntre(db, ronin.id, otro.id)) continue;
     opciones.push({
       accion: 'proponer_alianza',
@@ -272,10 +274,20 @@ export function motivoNoAtacar(db, atacante, defensor, ahora = Date.now()) {
   return null;
 }
 
-export function opcionesDeAtaque(db, ronin, ahora = Date.now()) {
+// Los objetivos más cercanos en la isla van primero; el mapa del celular muestra a todos.
+function distanciaEntre(a, b) {
+  const ta = territorioPorId(a.territorio);
+  const tb = territorioPorId(b.territorio);
+  if (!ta || !tb) return Number.MAX_SAFE_INTEGER;
+  return Math.hypot(ta.x - tb.x, ta.y - tb.y);
+}
+
+export function opcionesDeAtaque(db, ronin, ahora = Date.now(), maximo = 6) {
   if (ronin.era < conf().desdeEra) return [];
   return otrosRonin(db, ronin)
     .filter((otro) => !motivoNoAtacar(db, ronin, otro, ahora))
+    .sort((a, b) => distanciaEntre(ronin, a) - distanciaEntre(ronin, b))
+    .slice(0, maximo)
     .map((otro) => ({
       accion: 'atacar',
       parametros: { clan: otro.id },

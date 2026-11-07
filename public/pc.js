@@ -197,17 +197,34 @@ async function irAlMapa() {
   }
 }
 
-async function visitar(roninId) {
+async function visitar(roninId, aviso = null) {
   if (ronin && roninId === ronin.id) {
     irAlSantuario();
-    return;
+    return null;
   }
   try {
     const santuario = await api(`/api/santuario/${roninId}`);
-    visitarSantuario(santuario, coloresDe(santuario.ronin));
+    return await visitarSantuario(santuario, coloresDe(santuario.ronin), aviso);
   } catch {
     // Si no se puede visitar, el mapa sigue en pantalla.
+    return null;
   }
+}
+
+// Mi rōnin marcha: la pantalla lo sigue hasta el santuario enemigo y vuelve al terminar.
+let relojRegreso = null;
+
+async function seguirMarcha(batalla) {
+  clearTimeout(relojRegreso);
+  await visitar(batalla.defensor.id, `${ronin.nombre} marches on ${batalla.defensor.nombre}'s sanctuary`);
+  batallaInicio(batalla);
+}
+
+function volverTrasBatalla() {
+  clearTimeout(relojRegreso);
+  relojRegreso = setTimeout(() => {
+    if (vistaActual === 'santuario' && ronin) irAlSantuario();
+  }, 6000);
 }
 
 // El mundo en vivo: fondo del bando, rōnin animado, edificios y su voz.
@@ -340,11 +357,18 @@ function conectarSocket() {
   });
 
   socket.on('batalla:inicio', (datos) => {
-    if (datos?.atacante && datos?.defensor) batallaInicio(datos);
+    if (!datos?.atacante || !datos?.defensor) return;
+    if (ronin && datos.atacante.id === ronin.id && vistaActual === 'santuario') {
+      seguirMarcha(datos);
+      return;
+    }
+    batallaInicio(datos);
   });
 
   socket.on('batalla:resultado', (datos) => {
-    if (datos?.ganador) batallaResultado(datos);
+    if (!datos?.ganador) return;
+    batallaResultado(datos);
+    if (ronin && datos.atacante?.id === ronin.id) volverTrasBatalla();
   });
 }
 

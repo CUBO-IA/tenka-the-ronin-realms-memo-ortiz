@@ -125,6 +125,105 @@ function soyDefensorConEscudo(resultado, soyAtacante) {
   return !soyAtacante && resultado.escudoHasta && resultado.escudoHasta > Date.now();
 }
 
+// --- La isla en el celular: elegir objetivo ---
+let mundoMovil = null;
+let zoomIsla = 1;
+let clanElegido = null;
+
+const ETIQUETA_TROPA = { samurai: 'samurai', arquero: 'archers', oni: 'oni', kitsune: 'kitsune' };
+
+async function abrirIsla() {
+  $('#isla').classList.remove('oculto');
+  $('#isla-ficha').classList.add('oculto');
+  try {
+    mundoMovil = await api('/api/mundo');
+    renderIsla();
+  } catch (error) {
+    $('#isla-marcadores').innerHTML = '';
+  }
+}
+
+function aplicarZoomIsla() {
+  const mapa = $('#isla-mapa');
+  mapa.style.width = `${200 * zoomIsla}%`;
+}
+
+function renderIsla() {
+  const capa = $('#isla-marcadores');
+  capa.innerHTML = '';
+  if (!mundoMovil) return;
+  const ahora = Date.now();
+  for (const clan of mundoMovil.ronin) {
+    if (clan.x == null) continue;
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = `marcador-clan ${clan.bando}`;
+    if (clan.id === roninActual?.id) boton.classList.add('propio');
+    if (clan.era < 2) boton.classList.add('niebla');
+    if (clan.escudoHasta && clan.escudoHasta > ahora) boton.classList.add('escudo');
+    boton.style.left = `${(clan.x / 1920) * 100}%`;
+    boton.style.top = `${(clan.y / 1080) * 100}%`;
+    boton.innerHTML = `<span class="kamon-marco"><span class="kamon-mask"></span></span><span class="nombre">${escapar(clan.nombre)}</span>`;
+    aplicarKamon(boton.querySelector('.kamon-mask'), clan.kamon);
+    boton.addEventListener('click', () => mostrarFichaClan(clan));
+    capa.append(boton);
+  }
+}
+
+function mostrarFichaClan(clan) {
+  clanElegido = clan;
+  const ahora = Date.now();
+  const propio = clan.id === roninActual?.id;
+  const aliado = (mundoMovil.alianzas || []).some((a) => (a.a === clan.id && a.b === roninActual?.id) || (a.b === clan.id && a.a === roninActual?.id));
+  const escudo = clan.escudoHasta && clan.escudoHasta > ahora;
+  const tropas = Object.entries(clan.tropas || {}).map(([t, n]) => `${n} ${ETIQUETA_TROPA[t] || t}`).join(', ');
+  const terminados = (clan.edificios || []).filter((e) => e.etapa === 'terminado').length;
+
+  $('#ficha-territorio').textContent = `${clan.bandoEtiqueta} path · ${clan.territorioNombre || ''}`;
+  $('#ficha-nombre').textContent = propio ? `${clan.nombre} (you)` : clan.nombre;
+  const detalles = [`Era ${clan.era}`, `${terminados} finished building${terminados === 1 ? '' : 's'}`];
+  if (tropas) detalles.push(tropas);
+  if (aliado) detalles.push('your ally');
+  if (escudo) detalles.push('shielded');
+  if (clan.era < 2) detalles.push('hidden in the mist: cannot be attacked');
+  if (clan.bajoAtaque) detalles.push('under attack');
+  $('#ficha-detalle').textContent = detalles.join(' · ');
+
+  const puedeAtacar = !propio && clan.era >= 2 && !aliado && !escudo && (roninActual?.era || 1) >= 2;
+  $('#btn-ficha-atacar').disabled = !puedeAtacar;
+  $('#btn-ficha-aliar').disabled = propio || aliado;
+  $('#isla-ficha').classList.remove('oculto');
+}
+
+async function ordenarDesdeIsla(accion) {
+  if (!clanElegido) return;
+  const orden = {
+    accion,
+    parametros: { clan: clanElegido.id },
+    etiqueta: accion === 'atacar' ? `Attack ${clanElegido.nombre}` : `Propose an alliance to ${clanElegido.nombre}`,
+  };
+  $('#isla').classList.add('oculto');
+  agregarAlHilo({ id: (hilo.at(-1)?.id || 0) + 0.5, de: 'maestro', texto: orden.etiqueta, creado: Date.now() });
+  try {
+    const respuesta = await api('/api/acciones', { method: 'POST', body: JSON.stringify(orden) });
+    if (respuesta.salida) agregarAlHilo(respuesta.salida);
+    if (respuesta.ronin) {
+      roninActual = respuesta.ronin;
+      actualizarEstadoTarea();
+    }
+    if (respuesta.recursos) {
+      recursosActuales = respuesta.recursos;
+      renderRecursos();
+    }
+  } catch (err) {
+    agregarAlHilo({ id: (hilo.at(-1)?.id || 0) + 0.5, de: 'ronin', texto: err.message || 'I could not do that, master.', creado: Date.now(), opciones: [], respondido: true });
+  }
+}
+
+function renderAccionesIsla() {
+  $('#acciones-isla')?.classList.toggle('oculto', (roninActual?.era || 1) < 2);
+}
+
 function renderContador() {
   const contador = $('#bandeja-contador');
   if (!contador) return;
@@ -287,6 +386,19 @@ document.addEventListener('click', (evento) => {
   if (objetivo.id === 'btn-cerrar-bandeja') $('#bandeja').classList.add('oculto');
   if (objetivo.id === 'btn-cerrar-batalla') $('#tarjeta-batalla').classList.add('oculto');
   if (objetivo.id === 'btn-cerrar-era') $('#tarjeta-era').classList.add('oculto');
+  if (objetivo.id === 'btn-abrir-isla') abrirIsla();
+  if (objetivo.id === 'btn-cerrar-isla') $('#isla').classList.add('oculto');
+  if (objetivo.id === 'btn-ficha-cerrar') $('#isla-ficha').classList.add('oculto');
+  if (objetivo.id === 'btn-isla-mas') {
+    zoomIsla = Math.min(3, zoomIsla + 0.5);
+    aplicarZoomIsla();
+  }
+  if (objetivo.id === 'btn-isla-menos') {
+    zoomIsla = Math.max(0.5, zoomIsla - 0.5);
+    aplicarZoomIsla();
+  }
+  if (objetivo.id === 'btn-ficha-atacar') ordenarDesdeIsla('atacar');
+  if (objetivo.id === 'btn-ficha-aliar') ordenarDesdeIsla('proponer_alianza');
   if (objetivo.id === 'btn-cerrar-instalar') {
     localStorage.setItem(estaInstalada() ? 'tenka-avisos-no' : 'tenka-instalar-no', '1');
     renderTarjetaInstalar();
@@ -550,7 +662,17 @@ let socket = null;
 let relojTarea = null;
 let roninActual = null;
 let recursosActuales = {};
+let tropasActuales = {};
 let mensajeActual = null;
+
+function renderCamino() {
+  if (!roninActual) return;
+  const tropas = Object.entries(tropasActuales)
+    .filter(([, n]) => n > 0)
+    .map(([t, n]) => `${n} ${ETIQUETA_TROPA[t] || t}`)
+    .join(', ');
+  $('#ordenes-camino').textContent = `${roninActual.bandoEtiqueta} path · Era ${roninActual.era}${tropas ? ` · ${tropas}` : ''}`;
+}
 
 const ICONO_RECURSO = {
   cedro: 'madera',
@@ -612,6 +734,8 @@ function conectarSocketMovil() {
   socket.on('ronin:actualizado', (datos) => {
     if (datos?.ronin) {
       roninActual = datos.ronin;
+      renderAccionesIsla();
+      renderCamino();
       actualizarEstadoTarea();
     }
   });
@@ -620,6 +744,13 @@ function conectarSocketMovil() {
     if (datos?.recursos) {
       recursosActuales = datos.recursos;
       renderRecursos();
+    }
+  });
+
+  socket.on('tropas:actualizadas', (datos) => {
+    if (datos?.tropas) {
+      tropasActuales = datos.tropas;
+      renderCamino();
     }
   });
 
@@ -857,7 +988,8 @@ function mostrarOrdenes(datos) {
   tituloMovil.textContent = 'Sanctuary';
 
   $('#ordenes-titulo').textContent = roninActual.nombre;
-  $('#ordenes-camino').textContent = `${roninActual.bandoEtiqueta} path · Era ${roninActual.era} (Sanctuary)`;
+  tropasActuales = datos.tropas || {};
+  renderCamino();
   aplicarKamon($('#ordenes-kamon'), roninActual.kamon);
 
   renderRecursos();
@@ -865,6 +997,7 @@ function mostrarOrdenes(datos) {
   renderMensajeYComandos();
 
   cargarHilo();
+  renderAccionesIsla();
   noLeidos = Number(datos.noLeidos || 0);
   renderContador();
   renderTarjetaInstalar();

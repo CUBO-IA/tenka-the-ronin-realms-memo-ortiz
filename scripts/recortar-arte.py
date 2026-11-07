@@ -914,6 +914,16 @@ ALDEANOS_FIJOS = [
     ("sprites-aldeanos-era2.png", "luz-guardia-3", (2425, 420, 2700, 790)),
 ]
 
+# Tropas de la era 3 (en la demo se entrenan desde la era 2): 4 cuadros de
+# marcha y 3 de ataque por tipo, en filas de la hoja.
+TROPAS = [
+    ("sprites-tropas-era3.png", (300, 85, 2752, 410), "samurai"),
+    ("sprites-tropas-era3.png", (300, 420, 2752, 770), "arquero"),
+    ("sprites-tropas-era3.png", (300, 820, 2752, 1190), "oni"),
+    ("sprites-tropas-era3.png", (300, 1195, 2752, 1530), "kitsune"),
+]
+ALTO_TROPA = 200
+
 ALTO_ALDEANO = 220
 LIENZO_ALDEANO = (200, 240)
 
@@ -942,6 +952,19 @@ def extraer_era2() -> None:
         pieza = max(muro, key=lambda im: im.width * im.height)
         escala = min(1.0, 440 / max(1, pieza.width), 340 / max(1, pieza.height))
         _guardar(pieza, "edificio-sombra-muro-terminado.png", escala=escala)
+
+    print("Tropas")
+    for nombre_hoja, banda, tipo in TROPAS:
+        piezas = _piezas_de_fila(hoja(nombre_hoja), banda, hueco_min=20)
+        if len(piezas) < 7:
+            print(f"  ⚠ {tipo}: esperaba al menos 7 cuadros y hay {len(piezas)}")
+        nombres = [f"caminar-{i}" for i in range(4)] + [f"atacar-{i}" for i in range(3)]
+        for nombre, pieza in zip(nombres, piezas):
+            escala = ALTO_TROPA / pieza.height
+            pieza = pieza.resize((max(1, round(pieza.width * escala)), ALTO_TROPA), Image.Resampling.NEAREST)
+            lienzo = Image.new("RGBA", LIENZO_ALDEANO, (0, 0, 0, 0))
+            lienzo.alpha_composite(pieza, ((LIENZO_ALDEANO[0] - pieza.width) // 2, LIENZO_ALDEANO[1] - 10 - pieza.height))
+            _guardar(lienzo, f"tropa-{tipo}-{nombre}.png")
 
     print("Aldeanos de la Era 2")
     for nombre_hoja, nombre, caja in ALDEANOS_FIJOS:

@@ -2,7 +2,7 @@ import { edificioPorTipo, obtenerRecursos } from './acciones.js';
 import { mensajeDelRonin } from './agente.js';
 import { enviarPush } from './push.js';
 import { resumenPorId } from './mundo.js';
-import { efectosDeEdificios, resolverBatalla, sumarTropa, textosDeBatalla } from './conflicto.js';
+import { efectosDeEdificios, resolverBatalla, sumarTropa, textosDeBatalla, tropasDe } from './conflicto.js';
 import { cobrarConstruccion, guardarMensaje, obtenerEdificios } from './acciones.js';
 import { reglas } from './reglas.js';
 import { serializarRonin } from './ronin.js';
@@ -197,6 +197,9 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
       }
       io.to(sala).emit('mensaje:nuevo', { mensaje: nuevoMensaje });
       if (nuevaEra) io.to(sala).emit('era:nueva', { era: roninActualizado.era, nombre: roninActualizado.nombre });
+      if (tarea.accion === 'entrenar' || batalla) {
+        io.to(sala).emit('tropas:actualizadas', { tropas: tropasDe(db, ronin.id) });
+      }
       if (typeof io.emit === 'function') io.emit('mundo:ronin', { ronin: resumenPorId(db, ronin.id) });
     }
 

@@ -1275,3 +1275,167 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* --- La isla en el celular --- */
+.acciones-isla {
+  margin: 0.6rem 0 0;
+  text-align: center;
+}
+
+.acciones-isla .boton-texto {
+  font-size: 0.95rem;
+  color: var(--bermellon);
+  text-decoration: underline;
+}
+
+.isla {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  background: #2b3550;
+}
+
+.isla-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--papel);
+  color: #241f18;
+}
+
+.isla-cabecera h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.3rem;
+}
+
+.isla-zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.boton-redondo-chico {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(88, 68, 38, 0.4);
+  border-radius: 50%;
+  background: rgba(255, 252, 244, 0.9);
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #241f18;
+}
+
+.isla-lienzo {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.isla-mapa {
+  position: relative;
+  width: 200%;
+  transform-origin: 0 0;
+}
+
+.isla-mapa img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+.marcador-clan {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.marcador-clan .kamon-marco {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #fdfaf2;
+  background: var(--crest, #2b3a67);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.marcador-clan .kamon-mask {
+  width: 22px;
+  height: 22px;
+  background: #fdfaf2;
+}
+
+.marcador-clan.sombra .kamon-marco {
+  background: #5b3d7a;
+}
+
+.marcador-clan.propio .kamon-marco {
+  border-color: var(--bermellon);
+}
+
+.marcador-clan .nombre {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(253, 250, 242, 0.92);
+  color: #241f18;
+  font-family: var(--serif);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.marcador-clan.niebla {
+  opacity: 0.55;
+}
+
+.marcador-clan.escudo .kamon-marco {
+  box-shadow: 0 0 0 4px rgba(111, 168, 220, 0.55);
+}
+
+.isla-ficha {
+  padding: 0.9rem 1rem 1.1rem;
+  background: var(--papel);
+  color: #241f18;
+  border-top: 2px solid rgba(88, 68, 38, 0.3);
+}
+
+.isla-ficha h3 {
+  margin: 0.1rem 0 0.3rem;
+  font-family: var(--serif);
+  font-size: 1.4rem;
+}
+
+.ficha-detalle {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.ficha-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.ficha-acciones .boton-laca {
+  min-height: 2.4rem;
+  padding-block: 0.3rem;
+}
+
+.ficha-acciones .boton-laca:disabled {
+  opacity: 0.5;
+}

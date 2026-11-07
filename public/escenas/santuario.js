@@ -70,6 +70,9 @@ export class EscenaSantuario extends Phaser.Scene {
       farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, x: 1460, pasea: true },
     };
     this.aldeanos = {};
+    this.tropas = this.datos.tropas || {};
+    this.tropasSprites = [];
+    this.tiposTropa = this.bando === 'luz' ? ['samurai', 'arquero'] : ['oni', 'kitsune'];
   }
 
   preload() {
@@ -81,6 +84,13 @@ export class EscenaSantuario extends Phaser.Scene {
       this.bando === 'luz'
         ? ['casa', 'granero', 'torii', 'altar', 'terrazas', 'forja', 'empalizada', 'torre']
         : ['choza', 'pozo', 'circulo', 'altar', 'huerto', 'caldero', 'muro', 'farol'];
+
+    // Tropas del bando (4 cuadros de marcha)
+    for (const tipo of this.tiposTropa) {
+      for (let i = 0; i < 4; i += 1) {
+        this.load.image(`tropa_${tipo}_${i}`, `/assets/tropa-${tipo}-caminar-${i}.png`);
+      }
+    }
 
     // Aldeanos del bando
     for (const info of Object.values(this.aldeanosPorEdificio)) {
@@ -143,6 +153,47 @@ export class EscenaSantuario extends Phaser.Scene {
 
     // 6. Aplicar estado actual (idle, recolectando, construyendo, descansando)
     this.aplicarEstado(this.ronin.estado, this.ronin.tarea);
+
+    // 7. Las tropas, formadas frente a la puerta
+    this.actualizarTropas(this.tropas);
+  }
+
+  // ---------- Tropas ----------
+
+  actualizarTropas(tropas) {
+    this.tropas = tropas || {};
+    for (const sprite of this.tropasSprites) sprite.destroy();
+    this.tropasSprites = [];
+
+    let puesto = 0;
+    for (const tipo of this.tiposTropa) {
+      const cantidad = Math.min(6, this.tropas[tipo] || 0);
+      const animacion = `tropa_${tipo}`;
+      if (cantidad > 0 && !this.anims.exists(animacion)) {
+        this.anims.create({
+          key: animacion,
+          frames: [0, 1, 2, 3].map((i) => ({ key: `tropa_${tipo}_${i}` })),
+          frameRate: 6,
+          repeat: -1,
+        });
+      }
+      for (let i = 0; i < cantidad; i += 1) {
+        // Fila frente al torii o al círculo, a la derecha del claro.
+        const x = 1440 + puesto * 52;
+        const sprite = this.add.sprite(x, this.suelo - 4 + (puesto % 2) * 10, `tropa_${tipo}_0`);
+        sprite.setOrigin(0.5, 1);
+        sprite.setScale(0.85);
+        sprite.setDepth(7 + (puesto % 2));
+        sprite.setFlipX(true);
+        this.tropasSprites.push(sprite);
+        // Una de cada tres ronda; las demás montan guardia.
+        if (puesto % 3 === 0) {
+          sprite.play(animacion);
+          this.pasear(sprite, x);
+        }
+        puesto += 1;
+      }
+    }
   }
 
   crearEfectosAmbientales() {

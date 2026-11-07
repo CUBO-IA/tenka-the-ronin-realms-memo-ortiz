@@ -106,6 +106,11 @@
             <div id="lista-opciones" class="lista-opciones" role="group" aria-label="Suggested orders"></div>
           </div>
 
+          <!-- La isla: elegir a quién atacar o aliarse -->
+          <div id="acciones-isla" class="acciones-isla oculto">
+            <button id="btn-abrir-isla" class="boton-texto" type="button">⚔ Choose a target on the island</button>
+          </div>
+
           <!-- Hablarle en tus palabras -->
           <form id="form-orden-libre" class="form-orden-libre">
             <label class="etiqueta-seccion" for="entrada-orden-libre">
@@ -157,6 +162,37 @@
           <div id="batalla-botin" class="batalla-botin"></div>
           <p id="batalla-extra" class="batalla-extra"></p>
           <button id="btn-cerrar-batalla" class="boton-laca" type="button">Continue</button>
+        </div>
+      </section>
+
+      <!-- El mapa en el celular: tocar un clan para atacarlo o aliarse -->
+      <section id="isla" class="isla oculto" aria-label="The island">
+        <div class="isla-cabecera">
+          <div>
+            <p class="antetitulo">The Isle of Tenka</p>
+            <h2>Choose a clan</h2>
+          </div>
+          <div class="isla-zoom">
+            <button id="btn-isla-menos" class="boton-redondo-chico" type="button" aria-label="Zoom out">−</button>
+            <button id="btn-isla-mas" class="boton-redondo-chico" type="button" aria-label="Zoom in">+</button>
+            <button id="btn-cerrar-isla" class="boton-texto" type="button">Close</button>
+          </div>
+        </div>
+        <div id="isla-lienzo" class="isla-lienzo">
+          <div id="isla-mapa" class="isla-mapa">
+            <img src="/assets/fondo-mapa.jpg" alt="" draggable="false" />
+            <div id="isla-marcadores"></div>
+          </div>
+        </div>
+        <div id="isla-ficha" class="isla-ficha oculto">
+          <p class="antetitulo" id="ficha-territorio"></p>
+          <h3 id="ficha-nombre"></h3>
+          <p id="ficha-detalle" class="ficha-detalle"></p>
+          <div class="ficha-acciones">
+            <button id="btn-ficha-atacar" class="boton-laca" type="button">Attack</button>
+            <button id="btn-ficha-aliar" class="boton-laca" type="button">Propose alliance</button>
+            <button id="btn-ficha-cerrar" class="boton-texto" type="button">Back</button>
+          </div>
         </div>
       </section>
 

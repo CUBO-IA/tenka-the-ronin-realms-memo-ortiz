@@ -53,7 +53,16 @@ const ETIQUETA_EDIFICIO = {
 
 let juego = null;
 let relojTarea = null;
-let estadoActual = { ronin: null, recursos: {}, edificios: [], mensaje: null, colores: {} };
+let estadoActual = { ronin: null, recursos: {}, edificios: [], tropas: {}, mensaje: null, colores: {} };
+
+const ETIQUETA_TROPA = { samurai: 'samurai', arquero: 'archer', oni: 'oni', kitsune: 'kitsune' };
+
+function textoTropas(tropas) {
+  return Object.entries(tropas || {})
+    .filter(([, n]) => n > 0)
+    .map(([tipo, n]) => `${n} ${ETIQUETA_TROPA[tipo] || tipo}${n > 1 && tipo === 'arquero' ? 's' : ''}`)
+    .join(', ');
+}
 
 // Solo la escena que está en pantalla recibe actualizaciones.
 function escena() {
@@ -117,6 +126,7 @@ export function mostrarSantuario(estado) {
     ronin,
     edificios: estadoActual.edificios,
     recursos: estadoActual.recursos,
+    tropas: estadoActual.tropas,
     kimonoColor: colores?.kimono,
     hakamaColor: colores?.hakama,
   };
@@ -147,20 +157,26 @@ export function actualizarMapa(resumen) {
 }
 
 // El santuario de otro jugador: se ve, no se manda.
-export function visitarSantuario(santuario, colores) {
+// Devuelve una promesa que se cumple cuando la escena del santuario visitado ya está creada.
+export function visitarSantuario(santuario, colores, aviso = null) {
   ponerModo('visita');
   const { ronin } = santuario;
-  $('#hud-aviso').textContent = `Visiting ${ronin.nombre}'s sanctuary · ${santuario.territorio?.nombre || ''}`;
-  renderIdentidad(ronin);
+  $('#hud-aviso').textContent = aviso || `Visiting ${ronin.nombre}'s sanctuary · ${santuario.territorio?.nombre || ''}`;
+  renderIdentidad(ronin, santuario.tropas || {});
   const partida = crearJuego();
-  cuandoListo(partida, () => {
-    detenerEscenas(partida);
-    partida.scene.start('Santuario', {
-      ronin,
-      edificios: santuario.edificios,
-      recursos: {},
-      kimonoColor: colores?.kimono,
-      hakamaColor: colores?.hakama,
+  return new Promise((resolver) => {
+    cuandoListo(partida, () => {
+      detenerEscenas(partida);
+      partida.scene.start('Santuario', {
+        ronin,
+        edificios: santuario.edificios,
+        recursos: {},
+        tropas: santuario.tropas || {},
+        kimonoColor: colores?.kimono,
+        hakamaColor: colores?.hakama,
+      });
+      const escenaVisita = partida.scene.getScene('Santuario');
+      escenaVisita.events.once('create', () => resolver(escenaVisita));
     });
   });
 }
@@ -233,11 +249,19 @@ export function mostrarMensaje(mensaje) {
   if (modo === 'propio') escena()?.mostrarGlobo(mensaje.texto);
 }
 
-function renderIdentidad(ronin) {
+function renderIdentidad(ronin, tropas = null) {
   if (!ronin) return;
   $('#hud-nombre').textContent = ronin.nombre;
-  $('#hud-camino').textContent = `${ronin.bandoEtiqueta} path · Era ${ronin.era}`;
+  const extra = textoTropas(tropas ?? (ronin.id === estadoActual.ronin?.id ? estadoActual.tropas : null));
+  $('#hud-camino').textContent = `${ronin.bandoEtiqueta} path · Era ${ronin.era}${extra ? ` · ${extra}` : ''}`;
   aplicarKamon($('#hud-kamon'), ronin.kamon);
+}
+
+export function actualizarTropas(tropas) {
+  if (!tropas) return;
+  estadoActual.tropas = tropas;
+  renderIdentidad(estadoActual.ronin, tropas);
+  if (modo === 'propio') escena()?.actualizarTropas(tropas);
 }
 
 function renderRecursos(recursos) {
