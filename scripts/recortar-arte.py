@@ -692,6 +692,45 @@ EDIFICIOS_ERA1 = [
 
 
 
+def _quitar_huecos(pieza: Image.Image, tolerancia: int = 16, minimo: int = 250) -> Image.Image:
+    """Vuelve transparentes los huecos de fondo gris que quedaron encerrados
+    (el vano de un torii, el hueco de una torre). Un hueco es un parche grande
+    y parejo del color del fondo de la hoja; la piedra, con textura, no lo es."""
+    datos = np.array(pieza.convert("RGBA"))
+    alfa = datos[:, :, 3]
+    rgb = datos[:, :, :3].astype(np.int16)
+    # El gris de la hoja: el color más común entre los píxeles del borde ya transparentes no sirve
+    # (ya no están); se usa el gris plano típico de las hojas.
+    gris = np.array([186, 186, 185], dtype=np.int16)
+    cerca = (np.abs(rgb - gris).max(2) <= tolerancia) & (alfa > 0)
+    alto, ancho = cerca.shape
+    etiquetas = np.zeros((alto, ancho), dtype=np.int32)
+    actual = 0
+    for y0 in range(alto):
+        for x0 in range(ancho):
+            if not cerca[y0, x0] or etiquetas[y0, x0]:
+                continue
+            actual += 1
+            cola = deque([(y0, x0)])
+            etiquetas[y0, x0] = actual
+            miembros = [(y0, x0)]
+            while cola:
+                y, x = cola.popleft()
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    ny, nx = y + dy, x + dx
+                    if 0 <= ny < alto and 0 <= nx < ancho and cerca[ny, nx] and not etiquetas[ny, nx]:
+                        etiquetas[ny, nx] = actual
+                        cola.append((ny, nx))
+                        miembros.append((ny, nx))
+            if len(miembros) >= minimo:
+                ys, xs = zip(*miembros)
+                # Parejo de verdad: casi sin variación de color.
+                parche = rgb[list(ys), list(xs)]
+                if parche.std() < 6:
+                    datos[list(ys), list(xs)] = (0, 0, 0, 0)
+    return Image.fromarray(datos, "RGBA")
+
+
 def _quitar_rotulos(pieza: Image.Image, minimo: int = 500) -> Image.Image:
     """Borra los rótulos de la hoja ("Foundation", "ALTAR"…) que quedan
     pegados al recorte: son manchas chicas y sueltas, separadas del edificio.
@@ -751,7 +790,7 @@ def extraer_edificios() -> None:
         )
         fondo = _limpiar_halo(rgb, fondo, pasadas=3, saturacion_max=28, brillo_min=125, brillo_max=244)
         pieza = _recortar_contenido(_rgba(recorte, fondo), margen=1)
-        pieza = _quitar_rotulos(pieza)
+        pieza = _quitar_huecos(_quitar_rotulos(pieza))
 
         # Ajuste de escala a tamaño óptimo en pantalla (máx 440px de ancho o 340px de alto)
         escala = min(1.0, 440 / max(1, pieza.width), 340 / max(1, pieza.height))
@@ -873,7 +912,7 @@ def _piezas_de_fila(hoja: Image.Image, banda: tuple, hueco_min: int = 24, alto_m
             if vacias >= hueco_min or x == recorte.width:
                 fin = x - vacias + 1
                 pieza = _rgba(recorte.crop((inicio, 0, fin, recorte.height)), fondo[:, inicio:fin])
-                pieza = _quitar_rotulos(_recortar_contenido(pieza, margen=1))
+                pieza = _quitar_huecos(_quitar_rotulos(_recortar_contenido(pieza, margen=1)))
                 # Los títulos de la hoja son bajitos: fuera.
                 if pieza.height >= recorte.height * alto_min:
                     piezas.append(pieza)
