@@ -281,6 +281,24 @@ const ICONO_RECURSO = {
   mon: 'mon',
 };
 
+const ETIQUETA_RECURSO = {
+  cedro: 'cedar wood',
+  sauce: 'dead willow',
+  piedra: 'river stone',
+  lodo: 'black mire',
+  hierro: 'iron sand',
+  hongos: 'swamp mushrooms',
+  arroz: 'rice',
+  mon: 'mon',
+};
+
+// Orden fijo de la tira de recursos: materiales del bando, arroz y mon.
+const ORDEN_RECURSOS = ['cedro', 'sauce', 'piedra', 'lodo', 'hierro', 'hongos', 'arroz', 'mon'];
+
+function recursosOrdenados(recursos) {
+  return ORDEN_RECURSOS.filter((tipo) => tipo in (recursos || {})).map((tipo) => [tipo, recursos[tipo]]);
+}
+
 function iconoDeRecurso(tipo) {
   return ICONO_RECURSO[tipo] || tipo;
 }
@@ -318,7 +336,7 @@ function renderRecursos() {
   if (!contenedor) return;
   contenedor.innerHTML = '';
 
-  for (const [tipo, cantidad] of Object.entries(recursosActuales)) {
+  for (const [tipo, cantidad] of recursosOrdenados(recursosActuales)) {
     const chip = document.createElement('span');
     chip.className = 'recurso-chip';
     const archivoIcono = iconoDeRecurso(tipo);
@@ -354,9 +372,10 @@ function actualizarEstadoTarea() {
     try {
       const tarea = JSON.parse(roninActual.tarea || '{}');
       if (tarea.accion === 'recolectar') {
-        descripcion = `Gathering ${tarea.parametros?.recurso || 'resources'}`;
+        const recurso = tarea.parametros?.recurso;
+        descripcion = `Gathering ${ETIQUETA_RECURSO[recurso] || recurso || 'resources'}`;
       } else if (tarea.accion === 'construir') {
-        descripcion = `Constructing ${tarea.parametros?.edificio || 'building'}`;
+        descripcion = `Building the ${tarea.parametros?.edificio || 'sanctuary'}`;
       } else if (tarea.accion === 'descansar') {
         descripcion = 'Resting at sanctuary';
       }

@@ -14,7 +14,7 @@ import {
   ejecutarAccion,
   obtenerEdificios,
   obtenerRecursos,
-  ultimoMensaje,
+  mensajeActual,
 } from './acciones.js';
 import {
   COOKIE_COMPUTADORA,
@@ -219,9 +219,17 @@ export function crearApp({ db }) {
         sesion.id,
         opcionesDeCookie(req, ESTADOS.computadora),
       );
+      const ronin = roninDeUsuario(db, usuario.id);
       res.status(nuevo ? 201 : 200).json({
         usuario,
-        ronin: roninDeUsuario(db, usuario.id),
+        ronin,
+        ...(ronin
+          ? {
+              recursos: obtenerRecursos(db, ronin.id),
+              edificios: obtenerEdificios(db, ronin.id),
+              mensaje: mensajeActual(db, ronin),
+            }
+          : {}),
       });
     }),
   );
@@ -241,7 +249,7 @@ export function crearApp({ db }) {
         ? {
             recursos: obtenerRecursos(db, ronin.id),
             edificios: obtenerEdificios(db, ronin.id),
-            mensaje: ultimoMensaje(db, ronin.id),
+            mensaje: mensajeActual(db, ronin),
           }
         : {}),
     });
@@ -284,7 +292,7 @@ export function crearApp({ db }) {
           ? {
               recursos: obtenerRecursos(db, ronin.id),
               edificios: obtenerEdificios(db, ronin.id),
-              mensaje: ultimoMensaje(db, ronin.id),
+              mensaje: mensajeActual(db, ronin),
             }
           : {}),
         opciones: catalogoPublico(),

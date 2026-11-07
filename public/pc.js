@@ -1,6 +1,15 @@
 // Pantalla de la computadora. Solo muestra y pide; la verdad está en el servidor.
 
 import { aplicarKamon, cargarPiezas, pintarRonin } from '/recolorear.js';
+import {
+  actualizarEdificio,
+  actualizarEdificios,
+  actualizarRecursos,
+  actualizarRonin,
+  mostrarMensaje,
+  mostrarSantuario,
+  ocultarSantuario,
+} from '/santuario-pc.js';
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -8,6 +17,7 @@ const pantallas = {
   inicio: $('#pantalla-inicio'),
   qr: $('#pantalla-qr'),
   ronin: $('#pantalla-ronin'),
+  santuario: $('#pantalla-santuario'),
 };
 
 const formInicio = $('#form-inicio');
@@ -23,10 +33,15 @@ const btnVolver = $('#btn-volver');
 const btnSalir = $('#btn-salir');
 
 const btnEmparejar = $('#btn-emparejar');
+const btnEntrarSantuario = $('#btn-entrar-santuario');
+const btnTelefono = $('#btn-telefono');
+const btnSalirSantuario = $('#btn-salir-santuario');
 const pieSesion = $('#pie-sesion');
 
 let usuario = null;
 let ronin = null;
+// Estado del mundo del rōnin que manda el servidor.
+let mundo = { recursos: {}, edificios: [], mensaje: null };
 let catalogo = null;
 let socket = null;
 let vistaActual = 'inicio';
@@ -153,9 +168,47 @@ function etiquetaPorId(lista, id) {
   return lista?.find((elemento) => elemento.id === id)?.etiqueta || id;
 }
 
+function coloresDelRonin() {
+  const bando = catalogo?.bandos?.find((elemento) => elemento.id === ronin.bando);
+  const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
+  const hakama = catalogo?.hakamas?.find((elemento) => elemento.id === ronin.hakama);
+  return { kimono: kimono?.color, hakama: hakama?.color };
+}
+
+// El mundo en vivo: fondo del bando, rōnin animado, edificios y su voz.
+function irAlSantuario() {
+  detenerRelojSello();
+  mostrarVista('santuario');
+  mostrarPie(null);
+  document.body.dataset.bando = ronin.bando;
+  mostrarSantuario({
+    ronin,
+    recursos: mundo.recursos,
+    edificios: mundo.edificios,
+    mensaje: mundo.mensaje,
+    colores: coloresDelRonin(),
+  });
+}
+
+function guardarMundo(datos) {
+  if (!datos) return;
+  if (datos.recursos) mundo.recursos = datos.recursos;
+  if (Array.isArray(datos.edificios)) mundo.edificios = datos.edificios;
+  if (datos.mensaje) mundo.mensaje = datos.mensaje;
+}
+
+// La tarjeta "ha despertado" se muestra solo al crear el rōnin; después de
+// unos segundos, o al tocar el botón, se entra al santuario.
+let relojTarjeta = null;
+
 function mostrarRonin() {
   detenerRelojSello();
+  ocultarSantuario();
   mostrarVista('ronin');
+  clearTimeout(relojTarjeta);
+  relojTarjeta = setTimeout(() => {
+    if (vistaActual === 'ronin') irAlSantuario();
+  }, 7000);
 
   const bando = catalogo?.bandos?.find((elemento) => elemento.id === ronin.bando);
   const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
@@ -208,12 +261,47 @@ function conectarSocket() {
   socket.on('ronin:creado', (datos) => {
     if (!datos?.ronin) return;
     ronin = datos.ronin;
+    guardarMundo(datos);
     mostrarRonin();
+  });
+
+  socket.on('ronin:actualizado', (datos) => {
+    if (!datos?.ronin) return;
+    ronin = datos.ronin;
+    actualizarRonin(ronin);
+  });
+
+  socket.on('recursos:actualizados', (datos) => {
+    if (!datos?.recursos) return;
+    mundo.recursos = datos.recursos;
+    actualizarRecursos(datos.recursos);
+  });
+
+  socket.on('edificios:actualizados', (datos) => {
+    if (!Array.isArray(datos?.edificios)) return;
+    mundo.edificios = datos.edificios;
+    actualizarEdificios(datos.edificios);
+  });
+
+  socket.on('edificio:actualizado', (datos) => {
+    if (!datos?.edificio) return;
+    mundo.edificios = mundo.edificios.filter((e) => e.tipo !== datos.edificio.tipo);
+    mundo.edificios.push(datos.edificio);
+    actualizarEdificio(datos.edificio);
+  });
+
+  socket.on('mensaje:nuevo', (datos) => {
+    if (!datos?.mensaje) return;
+    mundo.mensaje = datos.mensaje;
+    mostrarMensaje(datos.mensaje);
   });
 }
 
 function volverAlInicio(mensaje = '') {
   detenerRelojSello();
+  clearTimeout(relojTarjeta);
+  ocultarSantuario();
+  mundo = { recursos: {}, edificios: [], mensaje: null };
   if (socket) {
     socket.disconnect();
     socket = null;
@@ -260,8 +348,12 @@ formInicio.addEventListener('submit', async (evento) => {
     formInicio.reset();
     conectarSocket();
 
-    if (ronin) mostrarRonin();
-    else mostrarQr();
+    if (ronin) {
+      guardarMundo(datos);
+      irAlSantuario();
+    } else {
+      mostrarQr();
+    }
   } catch (error) {
     errorInicio.textContent = error.message;
     if (error.campos?.nombre) entradaNombre.focus();
@@ -278,8 +370,27 @@ btnNuevoSello.addEventListener('click', () => {
 
 btnVolver.addEventListener('click', () => {
   detenerRelojSello();
-  if (ronin) mostrarRonin();
+  if (ronin) irAlSantuario();
   else mostrarQr();
+});
+
+btnEntrarSantuario.addEventListener('click', () => {
+  clearTimeout(relojTarjeta);
+  irAlSantuario();
+});
+
+btnTelefono.addEventListener('click', () => {
+  ocultarSantuario();
+  mostrarQr();
+});
+
+btnSalirSantuario.addEventListener('click', async () => {
+  try {
+    await api('/api/sesion', { method: 'DELETE' });
+  } catch {
+    // Aunque falle en el servidor, la pantalla vuelve al inicio.
+  }
+  volverAlInicio();
 });
 
 btnSalir.addEventListener('click', async () => {
@@ -308,8 +419,12 @@ async function iniciar() {
       usuario = estado.usuario;
       ronin = estado.ronin;
       conectarSocket();
-      if (ronin) mostrarRonin();
-      else mostrarQr();
+      if (ronin) {
+        guardarMundo(estado);
+        irAlSantuario();
+      } else {
+        mostrarQr();
+      }
       return;
     }
   } catch {

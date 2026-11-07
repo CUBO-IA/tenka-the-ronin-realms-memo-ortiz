@@ -728,3 +728,231 @@
     display: none;
   }
 }
+
+/* --- Santuario: el mundo en vivo --- */
+
+.pagina-pc[data-vista="santuario"] .fondo-pc,
+.pagina-pc[data-vista="santuario"] .marca,
+.pagina-pc[data-vista="santuario"] .presentacion,
+.pagina-pc[data-vista="santuario"] .creditos,
+.pagina-pc[data-vista="santuario"] .pie-sesion {
+  display: none;
+}
+
+.pagina-pc[data-vista="santuario"] .escenario {
+  padding: 0;
+  min-height: 100svh;
+}
+
+#pantalla-santuario {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.juego {
+  position: absolute;
+  inset: 0;
+  background: #171522;
+}
+
+.juego canvas {
+  display: block;
+  margin: 0 auto;
+}
+
+#pantalla-santuario .hud {
+  position: absolute;
+  z-index: 5;
+  margin: 0;
+  animation: aparecer 0.5s ease both;
+}
+
+.pergamino-tira {
+  padding: 0.55rem 1rem;
+  background: #fdfaf2;
+  border: 14px solid transparent;
+  border-image: url("/assets/tira-papel.png") 36 fill / 14px stretch;
+  box-shadow: 0 6px 16px rgba(20, 12, 6, 0.3);
+  color: #241f18;
+}
+
+.hud-recursos {
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--serif);
+  font-size: clamp(1rem, 1.3vw, 1.25rem);
+  font-weight: 600;
+}
+
+.hud-recursos .recurso {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hud-recursos .recurso img {
+  width: 1.7em;
+  height: 1.7em;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.hud-identidad {
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.hud-kamon-marco {
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  background: var(--papel);
+  border: 2px solid var(--crest, var(--indigo));
+}
+
+.hud-kamon-marco .kamon-mask {
+  width: 1.9rem;
+  height: 1.9rem;
+  background: var(--crest, var(--indigo));
+}
+
+.hud-identidad-texto {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.hud-identidad-texto b {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+}
+
+.hud-identidad-texto small {
+  font-size: 0.78rem;
+  color: #6b5a43;
+}
+
+.hud-estado {
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  min-width: 300px;
+  font-size: 0.95rem;
+}
+
+.hud-estado .estado-indicador {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hud-mensaje {
+  left: 1rem;
+  bottom: 1.1rem;
+  width: min(380px, 32vw);
+  margin: 0;
+}
+
+.hud-mensaje .texto-mensaje {
+  font-size: 1.02rem;
+}
+
+.hud-acciones {
+  right: 1rem;
+  bottom: 1.1rem;
+  display: flex;
+  gap: 1rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(20, 14, 10, 0.45);
+  border-radius: 4px;
+}
+
+.hud-acciones .boton-texto {
+  color: rgba(250, 242, 222, 0.92);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.punto-pulso {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2a8a48;
+  animation: pulso-activo 1.8s infinite;
+}
+
+.punto-pulso.ocupado {
+  background: #c86820;
+}
+
+@keyframes pulso-activo {
+  0% { box-shadow: 0 0 0 0 rgba(200, 104, 32, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(200, 104, 32, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(200, 104, 32, 0); }
+}
+
+.barra-progreso {
+  width: 100%;
+  height: 6px;
+  margin-top: 0.45rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progreso-relleno {
+  height: 100%;
+  width: 0%;
+  background: var(--bermellon);
+  transition: width 0.25s linear;
+}
+
+.pergamino-mensaje {
+  position: relative;
+  padding: 0.9rem 1.1rem;
+  background: #fdfaf2;
+  border: 14px solid transparent;
+  border-image: url("/assets/tira-papel.png") 36 fill / 14px stretch;
+  box-shadow: 0 6px 16px rgba(20, 12, 6, 0.3);
+  color: #241f18;
+}
+
+.pergamino-mensaje .antetitulo {
+  margin-bottom: 0.3rem;
+  font-size: 0.66rem;
+  color: #8b5b29;
+}
+
+.texto-mensaje {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.panel-ronin .acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .hud-mensaje {
+    display: none;
+  }
+
+  .hud-recursos {
+    font-size: 0.9rem;
+    gap: 0.6rem;
+  }
+}

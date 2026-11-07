@@ -8,6 +8,7 @@ import {
   siguienteEtapa,
 } from './reglas.js';
 import { ErrorDeJuego, camposDeZod, primerMensajeDeZod } from './errores.js';
+import { serializarRonin } from './ronin.js';
 
 const ACCIONES_VALIDAS = ['recolectar', 'construir', 'descansar'];
 
@@ -87,6 +88,12 @@ export function ultimoMensaje(db, roninId) {
     respondido: Boolean(fila.respondido),
     respuesta: fila.respuesta,
   };
+}
+
+// Un rōnin creado antes de que existieran los mensajes recibe el inicial al
+// momento de consultarlo, así el celular siempre tiene opciones que ofrecer.
+export function mensajeActual(db, ronin) {
+  return ultimoMensaje(db, ronin.id) || crearMensajeInicial(db, ronin);
 }
 
 export function generarOpciones(db, ronin) {
@@ -341,7 +348,8 @@ export function ejecutarAccion(db, roninId, cuerpo, ahora = Date.now()) {
 
   const roninActualizado = db.prepare('SELECT * FROM ronin WHERE id = ?').get(roninId);
   return {
-    ronin: roninActualizado,
+    // Siempre serializado: el celular y la computadora leen `tareaFin`, no `tarea_fin`.
+    ronin: serializarRonin(roninActualizado),
     recursos: obtenerRecursos(db, roninId),
     edificios: obtenerEdificios(db, roninId),
     duracionMs,

@@ -145,11 +145,49 @@
             </div>
 
             <div class="acciones">
+              <button id="btn-entrar-santuario" class="boton-laca" type="button">
+                Enter the sanctuary
+              </button>
               <button id="btn-emparejar" class="boton-tinta" type="button">
                 Link a phone
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- 4. El santuario: el mundo en vivo -->
+      <section id="pantalla-santuario" class="oculto" aria-label="Sanctuary">
+        <div id="juego" class="juego" aria-hidden="true"></div>
+
+        <div class="hud hud-recursos pergamino-tira" id="hud-recursos" aria-label="Resources"></div>
+
+        <div class="hud hud-identidad pergamino-tira">
+          <span class="hud-kamon-marco"><span id="hud-kamon" class="kamon-mask"></span></span>
+          <span class="hud-identidad-texto">
+            <b id="hud-nombre">Your rōnin</b>
+            <small id="hud-camino">Light path · Era 1</small>
+          </span>
+        </div>
+
+        <div class="hud hud-estado pergamino-tira">
+          <span class="estado-indicador">
+            <span id="hud-pulso" class="punto-pulso"></span>
+            <span id="hud-estado-texto">At rest in the sanctuary</span>
+          </span>
+          <div id="hud-barra" class="barra-progreso oculto">
+            <div id="hud-relleno" class="progreso-relleno"></div>
+          </div>
+        </div>
+
+        <div class="hud hud-mensaje pergamino-mensaje" aria-live="polite">
+          <p class="antetitulo">The rōnin speaks</p>
+          <blockquote id="hud-mensaje-texto" class="texto-mensaje"></blockquote>
+        </div>
+
+        <div class="hud hud-acciones">
+          <button id="btn-telefono" class="boton-texto" type="button">Link a phone</button>
+          <button id="btn-salir-santuario" class="boton-texto" type="button">Sign out</button>
         </div>
       </section>
 
@@ -169,6 +207,7 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/phaser.min.js"></script>
     <script type="module" src="/pc.js"></script>
   </body>
 </html>
