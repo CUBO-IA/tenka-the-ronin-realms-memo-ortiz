@@ -49,7 +49,7 @@ export const reglas = {
     maxCaracteresOrden: 200,
     groqModelo: 'llama-3.3-70b-versatile',
     geminiModelo: 'gemini-3.5-flash-lite',
-    geminiModeloRespaldo: 'gemini-2.5-flash-lite', // si el principal está saturado (503) o no llega a tiempo
+    geminiModeloRespaldo: 'gemini-3.1-flash-lite', // si el principal está saturado (503) o no llega a tiempo
     timeoutRespaldoMs: 4000,
   },
   // Era 2 · Aldea. Cada edificio terminado trae un aldeano que trabaja solo.
