@@ -980,3 +980,60 @@
   display: none;
 }
 
+
+/* --- Intro --- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+}
+
+.intro video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.intro-saltar {
+  position: absolute;
+  right: clamp(1rem, 2.4vw, 2.2rem);
+  bottom: 1.1rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid rgba(250, 242, 222, 0.5);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(250, 242, 222, 0.92);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.intro-empezar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.4rem 2.6rem;
+  border: 2px solid rgba(250, 242, 222, 0.7);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fdfaf2;
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.intro-empezar .kanji {
+  font-family: var(--mincho);
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.intro-empezar:hover {
+  background: rgba(158, 43, 37, 0.7);
+}

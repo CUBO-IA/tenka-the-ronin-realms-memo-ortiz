@@ -489,6 +489,47 @@ btnEmparejar.addEventListener('click', () => {
   mostrarQr();
 });
 
+// El video de intro: se ve al abrir la página sin sesión. Si el navegador no
+// deja arrancar con sonido, un botón lo inicia; "Skip intro" lo salta.
+function mostrarIntro() {
+  return new Promise((resolver) => {
+    const intro = $('#intro');
+    const video = $('#intro-video');
+    const btnEmpezar = $('#btn-intro-empezar');
+    const btnSaltar = $('#btn-saltar-intro');
+    if (!intro || !video || location.search.includes('sinintro')) {
+      resolver();
+      return;
+    }
+
+    let terminado = false;
+    const terminar = () => {
+      if (terminado) return;
+      terminado = true;
+      video.pause();
+      intro.classList.add('oculto');
+      resolver();
+    };
+
+    intro.classList.remove('oculto');
+    video.addEventListener('ended', terminar);
+    video.addEventListener('error', terminar);
+    btnSaltar.addEventListener('click', terminar);
+    document.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Escape') terminar();
+    });
+
+    video.play().catch(() => {
+      // Sin gesto del usuario no hay sonido: el botón arranca el video.
+      btnEmpezar.classList.remove('oculto');
+      btnEmpezar.addEventListener('click', () => {
+        btnEmpezar.classList.add('oculto');
+        video.play().catch(terminar);
+      });
+    });
+  });
+}
+
 async function iniciar() {
   // Un celular que abre la raíz va a su propia pantalla: la computadora es la vista grande.
   if (/iphone|ipad|ipod|android/i.test(navigator.userAgent) && !location.search.includes('pc')) {
@@ -520,6 +561,8 @@ async function iniciar() {
     // Sin sesión se muestra el inicio.
   }
 
+  // Sin sesión: primero el video, después el inicio.
+  await mostrarIntro();
   volverAlInicio();
 }
 
