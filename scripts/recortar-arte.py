@@ -522,6 +522,20 @@ SPRITES = {
 ANCHO_SPRITE = 240
 ALTO_SPRITE = 320
 ALTO_CONTENIDO = 300
+ANCHO_PELEA = 600  # los cuadros de pelea, con la espada extendida, van en un lienzo ancho
+
+
+def _desplazar_datos(datos: dict, dx: int) -> dict:
+    """Las cajas y polígonos de la máscara, corridos `dx` píxeles a la derecha
+    (para lienzos más anchos que el normal)."""
+    nuevo = dict(datos)
+    for clave in ("body", "sash", "head", "hakama"):
+        if clave in datos:
+            x0, y0, x1, y1 = datos[clave]
+            nuevo[clave] = (x0 + dx, y0, x1 + dx, y1)
+    if "excluir" in datos:
+        nuevo["excluir"] = [[(px + dx, py) for px, py in poligono] for poligono in datos["excluir"]]
+    return nuevo
 
 
 
@@ -800,26 +814,36 @@ def extraer_edificios() -> None:
 
 
 # --------------------------------------------------------------------------
-# Animaciones del rōnin (IDLE, WALK, CHOP)
+# Animaciones del rōnin (IDLE, WALK, CHOP, FIGHT)
 # --------------------------------------------------------------------------
 
 ANIMACIONES_RONIN = {
     "luz-sombrero": {
+        "fight": [(390, 1215, 605, 1500), (625, 1215, 815, 1500), (840, 1215, 1065, 1500), (1095, 1215, 1330, 1500), (1370, 1215, 1590, 1500)],
         "idle": [(434, 18, 551, 260), (671, 18, 786, 260), (902, 18, 1023, 260), (1144, 18, 1261, 260)],
         "walk": [(426, 274, 556, 520), (661, 274, 792, 520), (903, 274, 1037, 520), (1147, 274, 1280, 520), (1400, 274, 1528, 520), (1640, 274, 1768, 520)],
         "chop": [(394, 540, 535, 850), (665, 540, 824, 850), (985, 540, 1128, 850), (1679, 540, 1886, 850), (1920, 540, 2150, 850), (2178, 540, 2409, 850)],
     },
     "sombra-sombrero": {
+        "fight": [(915, 950, 1126, 1225), (1127, 950, 1415, 1225), (1440, 950, 1850, 1225), (1860, 950, 2120, 1225)],
         "idle": [(169, 25, 348, 315), (410, 25, 587, 315), (649, 25, 827, 315), (889, 25, 1066, 315)],
         "walk": [(194, 350, 345, 630), (422, 350, 573, 630), (664, 350, 803, 630), (884, 350, 1032, 630), (1117, 350, 1261, 630), (1342, 350, 1488, 630)],
         "chop": [(182, 680, 403, 940), (471, 680, 661, 940), (762, 680, 1009, 940), (1615, 680, 1807, 940), (1850, 680, 2080, 940), (2121, 680, 2353, 940)],
     },
     "luz-mono": {
+        "fight": [(1145, 895, 1366, 1245), (1380, 905, 1605, 1245), (1610, 905, 1875, 1245), (1905, 880, 2140, 1245), (2170, 905, 2395, 1245)],
         "idle": [(286, 40, 424, 410), (506, 40, 653, 410), (728, 40, 869, 410), (937, 40, 1076, 410)],
         "walk": [(1462, 40, 1641, 410), (1686, 40, 1866, 410), (1912, 40, 2094, 410), (2158, 40, 2320, 410), (2375, 40, 2554, 410)],
         "chop": [(283, 430, 454, 830), (526, 430, 697, 830), (774, 430, 982, 830), (1663, 430, 1892, 830), (1936, 430, 2167, 830), (2225, 430, 2385, 830)],
     },
     "sombra-mono": {
+        "fight": [
+            (1055, 890, 1315, 1275),
+            (1330, 890, 1705, 1275, [(1648, 1030, 1705, 1275)]),
+            (1680, 890, 1965, 1275, [(1680, 890, 1705, 1045)]),
+            (2075, 880, 2245, 1275),
+            (2265, 890, 2565, 1275),
+        ],
         "idle": [(207, 40, 364, 450), (427, 40, 587, 450), (643, 40, 805, 450), (866, 40, 1025, 450)],
         "walk": [(1340, 40, 1494, 450), (1554, 40, 1733, 450), (1779, 40, 1965, 450), (2004, 40, 2186, 450), (2231, 40, 2421, 450), (2471, 40, 2655, 450)],
         "chop": [(194, 480, 403, 880), (472, 480, 683, 880), (757, 480, 956, 880), (1512, 480, 1769, 880), (1863, 480, 2081, 880), (2135, 480, 2317, 880)],
@@ -827,16 +851,26 @@ ANIMACIONES_RONIN = {
 }
 
 
-def extraer_animaciones() -> None:
-    print("Cuadros de animación del rōnin (IDLE, WALK, CHOP)")
+def extraer_animaciones(solo: str | None = None) -> None:
+    print("Cuadros de animación del rōnin (IDLE, WALK, CHOP, FIGHT)")
 
     for clave, anims in ANIMACIONES_RONIN.items():
         datos_sprite = SPRITES[clave]
         hoja = abrir(ARTE / datos_sprite["hoja"])
 
         for anim, cajas in anims.items():
+            if solo and anim != solo:
+                continue
             for idx, caja in enumerate(cajas):
+                # Un quinto elemento son trozos del cuadro vecino que se borran
+                # (los cuadros de pelea se tocan por la espada).
+                borrar = caja[4] if len(caja) == 5 else []
+                caja = tuple(caja[:4])
                 recorte = hoja.crop(caja)
+                if borrar:
+                    gris = recorte.getpixel((0, 0))
+                    for bx0, by0, bx1, by1 in borrar:
+                        recorte.paste(gris, (bx0 - caja[0], by0 - caja[1], bx1 - caja[0], by1 - caja[1]))
                 rgb = np.asarray(recorte).astype(np.int16)
 
                 def admite(c: np.ndarray) -> bool:
@@ -863,15 +897,27 @@ def extraer_animaciones() -> None:
                     Image.Resampling.NEAREST,
                 )
 
-                lienzo = Image.new("RGBA", (ANCHO_SPRITE, ALTO_SPRITE), (0, 0, 0, 0))
-                lienzo.alpha_composite(
-                    sprite,
-                    ((ANCHO_SPRITE - sprite.width) // 2, ALTO_SPRITE - 10 - sprite.height),
-                )
+                if anim == "fight":
+                    # La espada se extiende mucho: lienzo ancho, con los pies
+                    # del rōnin en el centro para que no "salte" al golpear.
+                    ancho_lienzo = ANCHO_PELEA
+                    alfa = np.asarray(sprite)[:, :, 3]
+                    pies = np.where(alfa[-24:, :] > 0)[1]
+                    centro_pies = int(pies.mean()) if len(pies) else sprite.width // 2
+                    x = max(0, min(ancho_lienzo - sprite.width, ancho_lienzo // 2 - centro_pies))
+                    desplazamiento = (ancho_lienzo - ANCHO_SPRITE) // 2
+                else:
+                    ancho_lienzo = ANCHO_SPRITE
+                    x = (ANCHO_SPRITE - sprite.width) // 2
+                    desplazamiento = 0
+
+                lienzo = Image.new("RGBA", (ancho_lienzo, ALTO_SPRITE), (0, 0, 0, 0))
+                lienzo.alpha_composite(sprite, (x, ALTO_SPRITE - 10 - sprite.height))
 
                 prefijo = f"ronin-{clave}-{anim}-{idx}"
                 _guardar(lienzo, f"{prefijo}.png")
-                _guardar(mascara_de_sprite(lienzo, clave, datos_sprite), f"{prefijo}-mascara.png")
+                datos_mascara = _desplazar_datos(datos_sprite, desplazamiento) if desplazamiento else datos_sprite
+                _guardar(mascara_de_sprite(lienzo, clave, datos_mascara), f"{prefijo}-mascara.png")
 
     print()
 
@@ -1071,6 +1117,9 @@ def main() -> None:
         return
     if "--solo-era2" in sys.argv:
         extraer_era2()
+        return
+    if "--solo-pelea" in sys.argv:
+        extraer_animaciones(solo="fight")
         return
 
     print(f"Origen: {ARTE}")

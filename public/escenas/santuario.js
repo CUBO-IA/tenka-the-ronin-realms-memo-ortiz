@@ -4,6 +4,8 @@
 
 // Cuadros de ataque por tipo de tropa (el samurái solo tiene marcha).
 const CUADROS_DE_ATAQUE = { arquero: 3, oni: 3, kitsune: 3, samurai: 0 };
+// Cuadros de pelea con espada del rōnin, por variación de la hoja.
+const CUADROS_DE_PELEA = { 'luz-sombrero': 5, 'sombra-sombrero': 4, 'luz-mono': 5, 'sombra-mono': 5 };
 
 import { piezaDeTocado } from '/recolorear.js';
 
@@ -126,6 +128,7 @@ export class EscenaSantuario extends Phaser.Scene {
       idle: 4,
       walk: this.claveVariacion === 'luz-mono' ? 5 : 6,
       chop: 6,
+      fight: CUADROS_DE_PELEA[this.claveVariacion] || 4,
     };
 
     for (const [anim, total] of Object.entries(this.conteoCuadros)) {
@@ -450,9 +453,6 @@ export class EscenaSantuario extends Phaser.Scene {
     const colorKimono = this.hexARgb(this.kimonoColor);
     const colorHakama = this.hexARgb(this.hakamaColor);
 
-    const ANCHO = 240;
-    const ALTO = 320;
-
     for (const [anim, total] of Object.entries(this.conteoCuadros)) {
       for (let i = 0; i < total; i++) {
         const claveBase = `ronin-${this.claveVariacion}-${anim}-${i}`;
@@ -460,13 +460,16 @@ export class EscenaSantuario extends Phaser.Scene {
 
         if (this.textures.exists(claveTextura)) continue;
 
+        const imgSprite = this.textures.get(`${claveBase}_img`).getSourceImage();
+        const imgMascara = this.textures.get(`${claveBase}_mask`).getSourceImage();
+
+        // Cada cuadro trae su tamaño: los de pelea son más anchos por la espada.
+        const ANCHO = imgSprite.width || 240;
+        const ALTO = imgSprite.height || 320;
         const lienzo = document.createElement('canvas');
         lienzo.width = ANCHO;
         lienzo.height = ALTO;
         const ctx = lienzo.getContext('2d', { willReadFrequently: true });
-
-        const imgSprite = this.textures.get(`${claveBase}_img`).getSourceImage();
-        const imgMascara = this.textures.get(`${claveBase}_mask`).getSourceImage();
 
         ctx.drawImage(imgSprite, 0, 0, ANCHO, ALTO);
 
@@ -543,7 +546,7 @@ export class EscenaSantuario extends Phaser.Scene {
         fotogramas.push({ key: `${this.prefijo}${anim}_${i}` });
       }
 
-      const frameRate = anim === 'walk' ? 8 : anim === 'chop' ? 6 : 4;
+      const frameRate = anim === 'walk' ? 8 : anim === 'chop' ? 6 : anim === 'fight' ? 10 : 4;
       const clave = `${this.prefijo}${anim}`;
       if (this.anims.exists(clave)) this.anims.remove(clave);
       this.anims.create({
@@ -650,7 +653,8 @@ export class EscenaSantuario extends Phaser.Scene {
     if (!atacante || !this.roninSprite) return;
     this.terminarAtaque();
     const variacion = `${atacante.bando}-${atacante.tocado === 'mono' ? 'mono' : 'sombrero'}`;
-    const claves = ['idle-0', 'walk-0', 'walk-1', 'walk-2', 'walk-3', 'chop-0', 'chop-1', 'chop-2', 'chop-3'];
+    const claves = ['idle-0', 'walk-0', 'walk-1', 'walk-2', 'walk-3'];
+    for (let i = 0; i < (CUADROS_DE_PELEA[variacion] || 4); i += 1) claves.push(`fight-${i}`);
     for (const cuadro of claves) {
       const clave = `atacante_${variacion}_${cuadro}`;
       if (!this.textures.exists(clave)) this.load.image(clave, `/assets/ronin-${variacion}-${cuadro}.png`);
@@ -661,13 +665,15 @@ export class EscenaSantuario extends Phaser.Scene {
 
   entrarAtacante(atacante, variacion) {
     const clave = (cuadro) => `atacante_${variacion}_${cuadro}`;
-    for (const [nombre, cuadros] of [['walk', ['walk-0', 'walk-1', 'walk-2', 'walk-3']], ['chop', ['chop-0', 'chop-1', 'chop-2', 'chop-3']]]) {
+    const pelea = [];
+    for (let i = 0; i < (CUADROS_DE_PELEA[variacion] || 4); i += 1) pelea.push(`fight-${i}`);
+    for (const [nombre, cuadros] of [['walk', ['walk-0', 'walk-1', 'walk-2', 'walk-3']], ['fight', pelea]]) {
       const animacion = `atacante_${variacion}_${nombre}`;
       if (!this.anims.exists(animacion)) {
         this.anims.create({
           key: animacion,
           frames: cuadros.map((c) => ({ key: clave(c) })),
-          frameRate: nombre === 'walk' ? 8 : 6,
+          frameRate: nombre === 'walk' ? 8 : 10,
           repeat: -1,
         });
       }
@@ -859,13 +865,12 @@ export class EscenaSantuario extends Phaser.Scene {
     this.dibujarBarras();
   }
 
-  // El rōnin descarga un tajo (los cuadros de leñador sirven de golpe) y
-  // vuelve a la guardia.
+  // El rōnin descarga un tajo con la espada y vuelve a la guardia.
   golpeDeRonin(sprite, esAtacante) {
     if (!sprite?.active) return;
-    const animacion = esAtacante ? `atacante_${this.variacionAtacante}_chop` : `${this.prefijo}chop`;
+    const animacion = esAtacante ? `atacante_${this.variacionAtacante}_fight` : `${this.prefijo}fight`;
     if (!this.anims.exists(animacion)) return;
-    sprite.play({ key: animacion, repeat: 0, frameRate: 14 });
+    sprite.play({ key: animacion, repeat: 0, frameRate: 12 });
     sprite.once('animationcomplete', () => {
       if (!sprite.active) return;
       if (esAtacante) {
