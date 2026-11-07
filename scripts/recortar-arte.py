@@ -221,6 +221,12 @@ def extraer_fondos() -> None:
         tarjeta = abrir(ARTE / "interfaz" / f"tarjeta-{bando}.png")
         _guardar(tarjeta.resize((1000, 558), Image.Resampling.LANCZOS), f"tarjeta-{bando}.jpg")
 
+        # Fondos limpios del santuario para la computadora
+        santuario = abrir(ARTE / f"fondo-{bando}.png")
+        _guardar(santuario.resize((1920, 1072), Image.Resampling.LANCZOS), f"fondo-{bando}.jpg")
+
+    print()
+
 
 # --------------------------------------------------------------------------
 # Logo
@@ -611,6 +617,7 @@ def extraer_sprites() -> None:
         _guardar(mascara_de_sprite(lienzo, nombre, datos), f"ronin-{nombre}-mascara.png")
 
         # Cabeza suelta para los botones de tocado.
+        hx0, hy0, hx1, hy1 = datos["head"]
         cabeza = lienzo.crop((hx0, hy0, hx1, hy1))
         cabeza = _recortar_contenido(cabeza)
         if cabeza.width:
@@ -632,6 +639,163 @@ def extraer_sprites() -> None:
 # --------------------------------------------------------------------------
 
 
+def ascii_art(im, w=50):
+    im = im.convert('L')
+    h = int(im.height * (w / im.width) * 0.45)
+    im = im.resize((w, max(1, h)))
+    arr = np.asarray(im, dtype=int)
+    med = np.median(arr)
+    out = []
+    for row in arr:
+        out.append(''.join('#' if abs(p - med) > 20 else ' ' for p in row))
+    return '\n'.join(out)
+
+
+# --------------------------------------------------------------------------
+# Edificios Era 1
+# --------------------------------------------------------------------------
+
+EDIFICIOS_ERA1 = [
+    # Luz
+    ("edificio-luz-casa-cimientos.png", "edificios-luz-era1.png", (56, 117, 566, 848)),
+    ("edificio-luz-casa-construccion.png", "edificios-luz-era1.png", (595, 117, 1335, 848)),
+    ("edificio-luz-casa-terminado.png", "edificios-luz-era1-casa-terminada.png", (580, 183, 2214, 1233)),
+    ("edificio-luz-granero-cimientos.png", "edificios-luz-era1.png", (1414, 931, 1792, 1447)),
+    ("edificio-luz-granero-construccion.png", "edificios-luz-era1.png", (1841, 931, 2234, 1447)),
+    ("edificio-luz-granero-terminado.png", "edificios-luz-era1.png", (2291, 931, 2679, 1447)),
+    ("edificio-luz-torii-cimientos.png", "edificios-luz-era1.png", (92, 931, 454, 1447)),
+    ("edificio-luz-torii-construccion.png", "edificios-luz-era1.png", (535, 931, 876, 1447)),
+    ("edificio-luz-torii-terminado.png", "edificios-luz-era1.png", (940, 931, 1321, 1447)),
+    ("edificio-luz-altar-cimientos.png", "edificios-luz-era1.png", (1387, 117, 1775, 848)),
+    ("edificio-luz-altar-construccion.png", "edificios-luz-era1.png", (1807, 117, 2228, 848)),
+    ("edificio-luz-altar-terminado.png", "edificios-luz-era1.png", (2246, 117, 2703, 848)),
+
+    # Sombra
+    ("edificio-sombra-choza-cimientos.png", "edificios-sombra-era1.png", (401, 13, 972, 415)),
+    ("edificio-sombra-choza-construccion.png", "edificios-sombra-era1.png", (1139, 13, 1752, 415)),
+    ("edificio-sombra-choza-terminado.png", "edificios-sombra-era1.png", (1927, 13, 2543, 415)),
+    ("edificio-sombra-pozo-cimientos.png", "edificios-sombra-era1.png", (409, 417, 946, 772)),
+    ("edificio-sombra-pozo-construccion.png", "edificios-sombra-era1.png", (1226, 417, 1680, 772)),
+    ("edificio-sombra-pozo-terminado.png", "edificios-sombra-era1.png", (1986, 417, 2527, 772)),
+    ("edificio-sombra-circulo-cimientos.png", "edificios-sombra-era1.png", (391, 779, 964, 1115)),
+    ("edificio-sombra-circulo-construccion.png", "edificios-sombra-era1.png", (1140, 779, 1750, 1115)),
+    ("edificio-sombra-circulo-terminado.png", "edificios-sombra-era1.png", (1932, 779, 2556, 1115)),
+    ("edificio-sombra-altar-cimientos.png", "edificios-sombra-era1.png", (387, 1125, 993, 1492)),
+    ("edificio-sombra-altar-construccion.png", "edificios-sombra-era1.png", (1164, 1125, 1758, 1492)),
+    ("edificio-sombra-altar-terminado.png", "edificios-sombra-era1.png", (1910, 1125, 2577, 1492)),
+]
+
+
+def extraer_edificios() -> None:
+    print("Edificios de la Era 1")
+    hojas_abiertas: dict[str, Image.Image] = {}
+
+    for nombre_archivo, nombre_hoja, caja in EDIFICIOS_ERA1:
+        if nombre_hoja not in hojas_abiertas:
+            hojas_abiertas[nombre_hoja] = abrir(ARTE / nombre_hoja)
+        hoja = hojas_abiertas[nombre_hoja]
+        recorte = hoja.crop(caja)
+        rgb = np.asarray(recorte).astype(np.int16)
+
+        def admite(c: np.ndarray) -> bool:
+            saturacion = int(c.max() - c.min())
+            brillo = float(c.mean())
+            return saturacion < 26 and 130 <= brillo <= 244
+
+        fondo = _fondo_desde_bordes(
+            rgb,
+            tolerancia=14,
+            admite=admite,
+            devuelve=_bordes(recorte.width, recorte.height),
+        )
+        fondo = _limpiar_halo(rgb, fondo, pasadas=3, saturacion_max=28, brillo_min=125, brillo_max=244)
+        pieza = _recortar_contenido(_rgba(recorte, fondo), margen=1)
+
+        # Ajuste de escala a tamaño óptimo en pantalla (máx 440px de ancho o 340px de alto)
+        escala = min(1.0, 440 / max(1, pieza.width), 340 / max(1, pieza.height))
+        _guardar(pieza, nombre_archivo, escala=escala)
+
+    print()
+
+
+# --------------------------------------------------------------------------
+# Animaciones del rōnin (IDLE, WALK, CHOP)
+# --------------------------------------------------------------------------
+
+ANIMACIONES_RONIN = {
+    "luz-sombrero": {
+        "idle": [(434, 18, 551, 260), (671, 18, 786, 260), (902, 18, 1023, 260), (1144, 18, 1261, 260)],
+        "walk": [(426, 274, 556, 520), (661, 274, 792, 520), (903, 274, 1037, 520), (1147, 274, 1280, 520), (1400, 274, 1528, 520), (1640, 274, 1768, 520)],
+        "chop": [(394, 540, 535, 850), (665, 540, 824, 850), (985, 540, 1128, 850), (1679, 540, 1886, 850), (1920, 540, 2150, 850), (2178, 540, 2409, 850)],
+    },
+    "sombra-sombrero": {
+        "idle": [(169, 25, 348, 315), (410, 25, 587, 315), (649, 25, 827, 315), (889, 25, 1066, 315)],
+        "walk": [(194, 350, 345, 630), (422, 350, 573, 630), (664, 350, 803, 630), (884, 350, 1032, 630), (1117, 350, 1261, 630), (1342, 350, 1488, 630)],
+        "chop": [(182, 680, 403, 940), (471, 680, 661, 940), (762, 680, 1009, 940), (1615, 680, 1807, 940), (1850, 680, 2080, 940), (2121, 680, 2353, 940)],
+    },
+    "luz-mono": {
+        "idle": [(286, 40, 424, 410), (506, 40, 653, 410), (728, 40, 869, 410), (937, 40, 1076, 410)],
+        "walk": [(1462, 40, 1641, 410), (1686, 40, 1866, 410), (1912, 40, 2094, 410), (2158, 40, 2320, 410), (2375, 40, 2554, 410)],
+        "chop": [(283, 430, 454, 830), (526, 430, 697, 830), (774, 430, 982, 830), (1663, 430, 1892, 830), (1936, 430, 2167, 830), (2225, 430, 2385, 830)],
+    },
+    "sombra-mono": {
+        "idle": [(207, 40, 364, 450), (427, 40, 587, 450), (643, 40, 805, 450), (866, 40, 1025, 450)],
+        "walk": [(1340, 40, 1494, 450), (1554, 40, 1733, 450), (1779, 40, 1965, 450), (2004, 40, 2186, 450), (2231, 40, 2421, 450), (2471, 40, 2655, 450)],
+        "chop": [(194, 480, 403, 880), (472, 480, 683, 880), (757, 480, 956, 880), (1512, 480, 1769, 880), (1863, 480, 2081, 880), (2135, 480, 2317, 880)],
+    },
+}
+
+
+def extraer_animaciones() -> None:
+    print("Cuadros de animación del rōnin (IDLE, WALK, CHOP)")
+
+    for clave, anims in ANIMACIONES_RONIN.items():
+        datos_sprite = SPRITES[clave]
+        hoja = abrir(ARTE / datos_sprite["hoja"])
+
+        for anim, cajas in anims.items():
+            for idx, caja in enumerate(cajas):
+                recorte = hoja.crop(caja)
+                rgb = np.asarray(recorte).astype(np.int16)
+
+                def admite(c: np.ndarray) -> bool:
+                    saturacion = int(c.max() - c.min())
+                    brillo = float(c.mean())
+                    return saturacion < 20 and 140 <= brillo <= 236
+
+                fondo = _fondo_desde_bordes(
+                    rgb,
+                    tolerancia=12,
+                    admite=admite,
+                    devuelve=_bordes(recorte.width, recorte.height),
+                )
+                fondo = _limpiar_halo(rgb, fondo, pasadas=3, saturacion_max=24, brillo_min=135, brillo_max=238)
+                sprite = _recortar_contenido(_rgba(recorte, fondo))
+
+                if sprite.height < 10 or sprite.width < 10:
+                    continue
+
+                escala = ALTO_CONTENIDO / sprite.height
+                ancho_escalado = max(1, round(sprite.width * escala))
+                sprite = sprite.resize(
+                    (ancho_escalado, ALTO_CONTENIDO),
+                    Image.Resampling.NEAREST,
+                )
+
+                lienzo = Image.new("RGBA", (ANCHO_SPRITE, ALTO_SPRITE), (0, 0, 0, 0))
+                lienzo.alpha_composite(
+                    sprite,
+                    ((ANCHO_SPRITE - sprite.width) // 2, ALTO_SPRITE - 10 - sprite.height),
+                )
+
+                prefijo = f"ronin-{clave}-{anim}-{idx}"
+                _guardar(lienzo, f"{prefijo}.png")
+                _guardar(mascara_de_sprite(lienzo, clave, datos_sprite), f"{prefijo}-mascara.png")
+
+    print()
+
+
+
 def main() -> None:
     if "--solo-mascaras" in sys.argv:
         solo_mascaras()
@@ -646,6 +810,8 @@ def main() -> None:
     extraer_kamon()
     extraer_iconos()
     extraer_sprites()
+    extraer_edificios()
+    extraer_animaciones()
 
     print("Listo. Revisá public/assets/ antes de cambiar el CSS.")
 
