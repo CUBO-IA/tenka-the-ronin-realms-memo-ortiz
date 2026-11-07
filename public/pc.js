@@ -18,6 +18,17 @@ import {
   ocultarSantuario,
   visitarSantuario,
 } from '/santuario-pc.js';
+import {
+  alCambiarSonido,
+  alternarSonido,
+  detenerMusica,
+  iniciarMusica,
+  prepararSonido,
+  sonarCampana,
+  sonarCampanaGrande,
+  sonarMadera,
+  sonarTambores,
+} from '/audio.js';
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -44,6 +55,7 @@ const btnEmparejar = $('#btn-emparejar');
 const btnEntrarSantuario = $('#btn-entrar-santuario');
 const btnTelefono = $('#btn-telefono');
 const btnMapa = $('#btn-mapa');
+const btnSonido = $('#btn-sonido');
 const btnMiSantuario = $('#btn-mi-santuario');
 const btnSalirSantuario = $('#btn-salir-santuario');
 const pieSesion = $('#pie-sesion');
@@ -206,6 +218,7 @@ async function visitar(roninId, aviso = null) {
   }
   try {
     const santuario = await api(`/api/santuario/${roninId}`);
+    iniciarMusica(santuario.ronin?.bando);
     return await visitarSantuario(santuario, coloresDe(santuario.ronin), aviso);
   } catch {
     // Si no se puede visitar, el mapa sigue en pantalla.
@@ -218,6 +231,7 @@ let relojRegreso = null;
 
 async function seguirMarcha(batalla) {
   clearTimeout(relojRegreso);
+  sonarTambores();
   batallaInicio(batalla);
   await visitar(batalla.defensor.id, `${ronin.nombre} marches on ${batalla.defensor.nombre}'s sanctuary`);
 }
@@ -235,6 +249,7 @@ function irAlSantuario() {
   mostrarVista('santuario');
   mostrarPie(null);
   document.body.dataset.bando = ronin.bando;
+  iniciarMusica(ronin.bando);
   mostrarSantuario({
     ronin,
     recursos: mundo.recursos,
@@ -323,8 +338,12 @@ function conectarSocket() {
 
   socket.on('ronin:actualizado', (datos) => {
     if (!datos?.ronin) return;
+    const salioATrabajar = ronin?.estado === 'despierto' && datos.ronin.estado !== 'despierto';
+    const cambioDeEra = ronin && datos.ronin.era > ronin.era;
     ronin = datos.ronin;
     actualizarRonin(ronin);
+    if (cambioDeEra) sonarCampanaGrande();
+    else if (salioATrabajar) sonarMadera();
   });
 
   socket.on('recursos:actualizados', (datos) => {
@@ -350,6 +369,7 @@ function conectarSocket() {
     if (!datos?.mensaje) return;
     mundo.mensaje = datos.mensaje;
     mostrarMensaje(datos.mensaje);
+    if (datos.mensaje.de !== 'maestro') sonarCampana();
   });
 
   socket.on('mundo:ronin', (datos) => {
@@ -387,6 +407,7 @@ function conectarSocket() {
 }
 
 function volverAlInicio(mensaje = '') {
+  detenerMusica();
   detenerRelojSello();
   clearTimeout(relojTarjeta);
   ocultarSantuario();
@@ -467,6 +488,15 @@ btnEntrarSantuario.addEventListener('click', () => {
   clearTimeout(relojTarjeta);
   irAlSantuario();
 });
+
+// Sonido: el navegador exige un clic antes de sonar, así que arranca apagado
+// y recuerda la elección.
+btnSonido.addEventListener('click', () => alternarSonido());
+alCambiarSonido((activo) => {
+  btnSonido.textContent = activo ? 'Sound on' : 'Sound off';
+  btnSonido.setAttribute('aria-pressed', String(activo));
+});
+prepararSonido();
 
 btnMapa.addEventListener('click', () => {
   irAlMapa();

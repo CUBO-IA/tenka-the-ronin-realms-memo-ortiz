@@ -53,6 +53,7 @@ tenka/
 │   ├── index.html          inicio, QR, tarjeta del rōnin y el mundo (HUD en HTML)
 │   ├── pc.js               flujo de pantallas y Socket.IO
 │   ├── santuario-pc.js     el canvas de Phaser más la interfaz del mundo
+│   ├── audio.js            sonido sintetizado con Web Audio: música por bando y efectos
 │   ├── escenas/            santuario.js y mapa.js (Phaser)
 │   └── assets/             sprites y fondos recortados por scripts/recortar-arte.py
 ├── public/m/               el celular

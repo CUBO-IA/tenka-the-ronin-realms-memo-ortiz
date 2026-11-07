@@ -8,6 +8,7 @@ const CUADROS_DE_ATAQUE = { arquero: 3, oni: 3, kitsune: 3, samurai: 0 };
 const CUADROS_DE_PELEA = { 'luz-sombrero': 5, 'sombra-sombrero': 4, 'luz-mono': 5, 'sombra-mono': 5 };
 
 import { piezaDeTocado } from '/recolorear.js';
+import { sonarEspadas, sonarGong, sonarTambores } from '/audio.js';
 
 export class EscenaSantuario extends Phaser.Scene {
   constructor() {
@@ -725,6 +726,7 @@ export class EscenaSantuario extends Phaser.Scene {
     cartel.setOrigin(0.5, 0.5);
     cartel.setDepth(25);
     this.cartelAtaque = cartel;
+    sonarTambores();
 
     // El defensor sale a recibirlo.
     this.tweens.killTweensOf(this.roninSprite);
@@ -862,6 +864,7 @@ export class EscenaSantuario extends Phaser.Scene {
       });
     }
     this.cameras.main.shake(120, 0.0025);
+    sonarEspadas();
     this.dibujarBarras();
   }
 
@@ -899,6 +902,7 @@ export class EscenaSantuario extends Phaser.Scene {
     const ganador = ganaAtacante ? this.atacanteSprite : this.roninSprite;
 
     this.cameras.main.flash(300, 255, 240, 220);
+    sonarGong(!ganaAtacante);
     if (ganador?.anims) ganador.play(ganador === this.roninSprite ? `${this.prefijo}idle` : `atacante_${this.variacionAtacante}_walk`);
     for (const perdedor of perdedores) {
       if (!perdedor?.active) continue;
