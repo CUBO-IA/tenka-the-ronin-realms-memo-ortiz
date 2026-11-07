@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/assets/logo.png" alt="Tenka: The Rōnin Realms" width="420">
+  <img src="arte/Tenka-logo-bg.png" alt="Tenka: The Rōnin Realms" width="100%">
 </p>
 
 <p align="center"><em>Light or Shadow. Your rōnin builds while you sleep.</em></p>
