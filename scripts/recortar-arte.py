@@ -922,6 +922,13 @@ TROPAS = [
     ("sprites-tropas-era3.png", (300, 820, 2752, 1190), "oni"),
     ("sprites-tropas-era3.png", (300, 1195, 2752, 1530), "kitsune"),
 ]
+# Los samuráis se tocan entre sí en la hoja: sus pasos van con cajas fijas.
+TROPAS_FIJAS = [
+    ("sprites-tropas-era3.png", "samurai-caminar-0", (380, 90, 585, 405)),
+    ("sprites-tropas-era3.png", "samurai-caminar-1", (590, 90, 785, 405)),
+    ("sprites-tropas-era3.png", "samurai-caminar-2", (790, 90, 990, 405)),
+    ("sprites-tropas-era3.png", "samurai-caminar-3", (995, 90, 1195, 405)),
+]
 ALTO_TROPA = 200
 
 ALTO_ALDEANO = 220
@@ -954,7 +961,21 @@ def extraer_era2() -> None:
         _guardar(pieza, "edificio-sombra-muro-terminado.png", escala=escala)
 
     print("Tropas")
+    for nombre_hoja, nombre, caja in TROPAS_FIJAS:
+        piezas = _piezas_de_fila(hoja(nombre_hoja), caja, hueco_min=200)
+        if not piezas:
+            print(f"  ⚠ {nombre}: no se encontró el cuadro")
+            continue
+        pieza = max(piezas, key=lambda im: im.width * im.height)
+        escala = ALTO_TROPA / pieza.height
+        pieza = pieza.resize((max(1, round(pieza.width * escala)), ALTO_TROPA), Image.Resampling.NEAREST)
+        lienzo = Image.new("RGBA", LIENZO_ALDEANO, (0, 0, 0, 0))
+        lienzo.alpha_composite(pieza, ((LIENZO_ALDEANO[0] - pieza.width) // 2, LIENZO_ALDEANO[1] - 10 - pieza.height))
+        _guardar(lienzo, f"tropa-{nombre}.png")
+
     for nombre_hoja, banda, tipo in TROPAS:
+        if tipo == "samurai":
+            continue
         piezas = _piezas_de_fila(hoja(nombre_hoja), banda, hueco_min=20)
         if len(piezas) < 7:
             print(f"  ⚠ {tipo}: esperaba al menos 7 cuadros y hay {len(piezas)}")
