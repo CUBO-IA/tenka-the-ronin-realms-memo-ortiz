@@ -5,3 +5,7 @@ tenka.db-wal
 .env
 .DS_Store
 respaldos/
+
+# Archivos de trabajo del intro, solo locales
+arte/Tenka Intro.ai
+arte/Tenka Intro.pdf
