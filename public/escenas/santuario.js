@@ -195,6 +195,24 @@ export class EscenaSantuario extends Phaser.Scene {
     this.formarPatio();
   }
 
+  // Ronda continua entre dos puntos: una sola animación de caminar, sin cortes.
+  patrullar(sprite, centro, rango) {
+    const animacion = sprite.animacionPaso;
+    if (animacion && this.anims.exists(animacion)) sprite.play(animacion, true);
+    sprite.x = centro - rango;
+    sprite.setFlipX(false);
+    this.tweens.add({
+      targets: sprite,
+      x: centro + rango,
+      duration: rango * 2 * 28,
+      ease: 'Linear',
+      yoyo: true,
+      repeat: -1,
+      onYoyo: () => sprite.active && sprite.setFlipX(true),
+      onRepeat: () => sprite.active && sprite.setFlipX(false),
+    });
+  }
+
   // Guardias y tropas en filas de a cinco; cada nuevo se suma al final.
   formarPatio() {
     const guardias = Object.values(this.aldeanos || {}).filter((sprite) => sprite.esGuardia && sprite.active);
@@ -211,7 +229,9 @@ export class EscenaSantuario extends Phaser.Scene {
       sprite.y = y;
       sprite.anims?.stop();
       if (sprite.texturaQuieta) sprite.setTexture(sprite.texturaQuieta);
-      // Montan guardia quietos, mirando al camino.
+      // Las tropas montan guardia quietas; los guardias patrullan ida y vuelta,
+      // a paso parejo y sin frenar, mirando hacia donde caminan.
+      if (sprite.esGuardia) this.patrullar(sprite, x, 70 + renglon * 20);
     });
   }
 
