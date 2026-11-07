@@ -196,7 +196,7 @@ export class EscenaSantuario extends Phaser.Scene {
   }
 
   // Ronda continua entre dos puntos: una sola animación de caminar, sin cortes.
-  patrullar(sprite, centro, rango) {
+  patrullar(sprite, centro, rango, retraso = 0) {
     const animacion = sprite.animacionPaso;
     if (animacion && this.anims.exists(animacion)) sprite.play(animacion, true);
     sprite.x = centro - rango;
@@ -205,6 +205,7 @@ export class EscenaSantuario extends Phaser.Scene {
       targets: sprite,
       x: centro + rango,
       duration: rango * 2 * 28,
+      delay: retraso,
       ease: 'Linear',
       yoyo: true,
       repeat: -1,
@@ -229,9 +230,9 @@ export class EscenaSantuario extends Phaser.Scene {
       sprite.y = y;
       sprite.anims?.stop();
       if (sprite.texturaQuieta) sprite.setTexture(sprite.texturaQuieta);
-      // Las tropas montan guardia quietas; los guardias patrullan ida y vuelta,
-      // a paso parejo y sin frenar, mirando hacia donde caminan.
-      if (sprite.esGuardia) this.patrullar(sprite, x, 70 + renglon * 20);
+      // Todos rondan en su puesto, ida y vuelta, a paso parejo y sin frenar;
+      // cada uno arranca en un momento distinto para que no vayan en bloque.
+      this.patrullar(sprite, x, sprite.esGuardia ? 60 : 26, i * 350);
     });
   }
 
