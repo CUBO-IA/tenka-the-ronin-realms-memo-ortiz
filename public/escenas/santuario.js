@@ -30,45 +30,51 @@ export class EscenaSantuario extends Phaser.Scene {
     this.destinoX = 960;
     this.destinoY = this.suelo;
 
-    // Posiciones en el suelo del santuario según la composición de las maquetas:
-    // la casa a la izquierda, el torii a la derecha, el rōnin trabaja en medio.
+    // Composición por zonas (fondo 1920x1080, suelo en `y`). Escala: la casa
+    // mide el doble que el rōnin, como en las maquetas. La fila de atrás es
+    // más chica y queda detrás de la de adelante.
     const y = this.suelo;
-    // La era 2 va en una segunda fila, más atrás y más chica, y la empalizada
-    // o el muro cierran el frente a la izquierda.
+    const atras = y - 95;
     this.posicionesEdificios = {
       luz: {
-        casa: { x: 330, y, escala: 1 },
-        granero: { x: 745, y: y - 10, escala: 0.9 },
-        altar: { x: 1330, y, escala: 0.9 },
-        torii: { x: 1720, y, escala: 1 },
-        terrazas: { x: 560, y: y - 150, escala: 0.62, fondo: true },
-        forja: { x: 1060, y: y - 150, escala: 0.62, fondo: true },
-        torre: { x: 1540, y: y - 150, escala: 0.62, fondo: true },
-        empalizada: { x: 150, y: y + 30, escala: 0.75 },
+        empalizada: { x: 95, y: y + 20, escala: 0.9, fondo: true },
+        casa: { x: 330, y, escala: 1.3 },
+        terrazas: { x: 600, y: atras, escala: 0.85, fondo: true },
+        granero: { x: 860, y: atras, escala: 0.85, fondo: true },
+        forja: { x: 1140, y: atras, escala: 0.85, fondo: true },
+        altar: { x: 1420, y: atras, escala: 0.85, fondo: true },
+        torre: { x: 1630, y: atras - 10, escala: 0.8, fondo: true },
+        torii: { x: 1790, y, escala: 1.2 },
       },
       sombra: {
-        choza: { x: 330, y, escala: 1 },
-        pozo: { x: 745, y: y - 10, escala: 0.9 },
-        altar: { x: 1330, y, escala: 0.9 },
-        circulo: { x: 1720, y, escala: 1 },
-        huerto: { x: 560, y: y - 150, escala: 0.62, fondo: true },
-        caldero: { x: 1060, y: y - 150, escala: 0.62, fondo: true },
-        farol: { x: 1540, y: y - 150, escala: 0.62, fondo: true },
-        muro: { x: 150, y: y + 30, escala: 0.75 },
+        muro: { x: 95, y: y + 20, escala: 0.9, fondo: true },
+        choza: { x: 330, y, escala: 1.3 },
+        huerto: { x: 600, y: atras, escala: 0.85, fondo: true },
+        pozo: { x: 860, y: atras, escala: 0.85, fondo: true },
+        caldero: { x: 1140, y: atras, escala: 0.85, fondo: true },
+        altar: { x: 1420, y: atras, escala: 0.85, fondo: true },
+        farol: { x: 1630, y: atras - 10, escala: 0.8, fondo: true },
+        circulo: { x: 1790, y, escala: 1.2 },
       },
     };
 
-    // Qué aldeano trae cada edificio de la era 2, y qué hace.
+    // Cada aldeano trabaja en su edificio (granjero en las terrazas, herrero en
+    // la forja); los guardias van al patio de armas, con las tropas.
     this.aldeanosPorEdificio = {
-      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 520, pasea: false },
-      forja: { tipo: 'luz-herrero', cuadros: 4, ritmo: 5, x: 1150, pasea: false },
-      empalizada: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, x: 250, pasea: true },
-      torre: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, x: 1460, pasea: true },
-      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 520, pasea: true },
-      caldero: { tipo: 'sombra-alquimista', cuadros: 4, ritmo: 5, x: 1150, pasea: false },
-      muro: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, x: 250, pasea: true },
-      farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, x: 1460, pasea: true },
+      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 560, y: atras + 8, guardia: false },
+      forja: { tipo: 'luz-herrero', cuadros: 4, ritmo: 5, x: 1215, y: atras + 10, guardia: false },
+      empalizada: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, guardia: true },
+      torre: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, guardia: true },
+      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 560, y: atras + 8, guardia: false },
+      caldero: { tipo: 'sombra-alquimista', cuadros: 4, ritmo: 5, x: 1215, y: atras + 10, guardia: false },
+      muro: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
+      farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
     };
+    // El patio de armas: filas de a 5 a la derecha del claro, frente al torii.
+    this.patio = { x: 1330, y, paso: 54, porFila: 5, filaAlto: 22 };
+    this.escalaRonin = 0.72;
+    this.escalaAldeano = 0.62;
+    this.escalaTropa = 0.6;
     this.aldeanos = {};
     this.tropas = this.datos.tropas || {};
     this.tropasSprites = [];
@@ -165,9 +171,8 @@ export class EscenaSantuario extends Phaser.Scene {
     for (const sprite of this.tropasSprites) sprite.destroy();
     this.tropasSprites = [];
 
-    let puesto = 0;
     for (const tipo of this.tiposTropa) {
-      const cantidad = Math.min(6, this.tropas[tipo] || 0);
+      const cantidad = Math.min(10, this.tropas[tipo] || 0);
       const animacion = `tropa_${tipo}`;
       if (cantidad > 0 && !this.anims.exists(animacion)) {
         this.anims.create({
@@ -178,22 +183,36 @@ export class EscenaSantuario extends Phaser.Scene {
         });
       }
       for (let i = 0; i < cantidad; i += 1) {
-        // Fila frente al torii o al círculo, a la derecha del claro.
-        const x = 1440 + puesto * 52;
-        const sprite = this.add.sprite(x, this.suelo - 4 + (puesto % 2) * 10, `tropa_${tipo}_0`);
+        const sprite = this.add.sprite(this.patio.x, this.patio.y, `tropa_${tipo}_0`);
         sprite.setOrigin(0.5, 1);
-        sprite.setScale(0.85);
-        sprite.setDepth(7 + (puesto % 2));
-        sprite.setFlipX(true);
+        sprite.setScale(this.escalaTropa);
+        sprite.texturaQuieta = `tropa_${tipo}_0`;
+        sprite.animacionPaso = animacion;
         this.tropasSprites.push(sprite);
-        // Una de cada tres ronda; las demás montan guardia.
-        if (puesto % 3 === 0) {
-          sprite.play(animacion);
-          this.pasear(sprite, x);
-        }
-        puesto += 1;
       }
     }
+    this.formarPatio();
+  }
+
+  // Guardias y tropas en filas de a cinco; cada nuevo se suma al final.
+  formarPatio() {
+    const guardias = Object.values(this.aldeanos || {}).filter((sprite) => sprite.esGuardia && sprite.active);
+    const fila = [...guardias, ...this.tropasSprites];
+    fila.forEach((sprite, i) => {
+      const columna = i % this.patio.porFila;
+      const renglon = Math.floor(i / this.patio.porFila);
+      const x = this.patio.x + columna * this.patio.paso + renglon * 18;
+      const y = this.patio.y - renglon * this.patio.filaAlto;
+      this.tweens.killTweensOf(sprite);
+      sprite.setDepth(9 - renglon);
+      sprite.setFlipX(false);
+      sprite.x = x;
+      sprite.y = y;
+      sprite.anims?.stop();
+      if (sprite.texturaQuieta) sprite.setTexture(sprite.texturaQuieta);
+      // Solo el primero de cada fila ronda un poco; el resto monta guardia.
+      if (columna === 0) this.pasear(sprite, x, 60);
+    });
   }
 
   crearEfectosAmbientales() {
@@ -307,28 +326,36 @@ export class EscenaSantuario extends Phaser.Scene {
       for (let i = 0; i < info.cuadros; i += 1) cuadros.push({ key: `aldeano_${info.tipo}_${i}` });
       this.anims.create({ key: animacion, frames: cuadros, frameRate: info.ritmo, repeat: -1 });
     }
-    const sprite = this.add.sprite(info.x, this.suelo - 6, `aldeano_${info.tipo}_0`);
+    const sprite = this.add.sprite(info.x || 0, info.y || this.suelo, `aldeano_${info.tipo}_0`);
     sprite.setOrigin(0.5, 1);
-    sprite.setScale(0.9);
-    sprite.setDepth(8);
-    sprite.play(animacion);
+    sprite.setScale(this.escalaAldeano);
+    sprite.setDepth(info.guardia ? 8 : 6);
+    sprite.esGuardia = Boolean(info.guardia);
+    sprite.texturaQuieta = `aldeano_${info.tipo}_0`;
+    sprite.animacionPaso = animacion;
+    if (!info.guardia) sprite.play(animacion);
     this.aldeanos[tipo] = sprite;
-    if (info.pasea) this.pasear(sprite, info.x);
+    if (info.guardia) this.formarPatio();
   }
 
-  // Los guardias y recolectores van y vienen; los demás trabajan en su sitio.
-  pasear(sprite, centro) {
-    const destino = centro + Phaser.Math.Between(-140, 140);
+  // Un paseo corto y lento, ida y vuelta, mirando hacia donde camina.
+  pasear(sprite, centro, rango = 90) {
+    if (!sprite.active) return;
+    const destino = centro + Phaser.Math.Between(-rango, rango);
     sprite.setFlipX(destino < sprite.x);
+    const animacion = sprite.animacionPaso;
+    if (animacion && this.anims.exists(animacion)) sprite.play(animacion, true);
     this.tweens.add({
       targets: sprite,
       x: destino,
-      duration: Math.abs(destino - sprite.x) * 12 + 400,
+      duration: Math.abs(destino - sprite.x) * 20 + 300,
       ease: 'Linear',
       onComplete: () => {
         if (!sprite.active) return;
-        this.time.delayedCall(Phaser.Math.Between(800, 2500), () => {
-          if (sprite.active) this.pasear(sprite, centro);
+        sprite.anims.stop();
+        if (sprite.texturaQuieta) sprite.setTexture(sprite.texturaQuieta);
+        this.time.delayedCall(Phaser.Math.Between(1500, 4000), () => {
+          if (sprite.active) this.pasear(sprite, centro, rango);
         });
       },
     });
@@ -482,7 +509,7 @@ export class EscenaSantuario extends Phaser.Scene {
     // Sprite animado del rōnin
     this.roninSprite = this.add.sprite(960, this.suelo, `${this.prefijo}idle_0`);
     this.roninSprite.setOrigin(0.5, 1);
-    this.roninSprite.setScale(0.95);
+    this.roninSprite.setScale(this.escalaRonin);
     this.roninSprite.setDepth(10);
     this.roninSprite.play(`${this.prefijo}idle`);
   }
@@ -511,7 +538,8 @@ export class EscenaSantuario extends Phaser.Scene {
       const tipoEdificio = tarea?.parametros?.edificio || 'casa';
       const posEdificio = this.posicionesEdificios[this.bando]?.[tipoEdificio];
       // Se para a la derecha del edificio, mirando hacia él.
-      const targetX = posEdificio ? Phaser.Math.Clamp(posEdificio.x + 190, 120, 1800) : 1030;
+      const ancho = posEdificio ? 150 * (posEdificio.escala || 1) : 150;
+      const targetX = posEdificio ? Phaser.Math.Clamp(posEdificio.x + ancho, 120, 1800) : 1030;
       const targetY = this.suelo;
 
       this.moverRonin(targetX, targetY, () => {
@@ -581,7 +609,7 @@ export class EscenaSantuario extends Phaser.Scene {
 
     this.atacanteSprite = this.add.sprite(-150, this.suelo, clave('idle-0'));
     this.atacanteSprite.setOrigin(0.5, 1);
-    this.atacanteSprite.setScale(0.95);
+    this.atacanteSprite.setScale(this.escalaRonin);
     this.atacanteSprite.setDepth(11);
     this.atacanteSprite.play(`atacante_${variacion}_walk`);
     this.variacionAtacante = variacion;
@@ -595,7 +623,7 @@ export class EscenaSantuario extends Phaser.Scene {
       for (let i = 0; i < cantidad && puesto < 6; i += 1) {
         const sprite = this.add.sprite(-260 - puesto * 60, this.suelo - 4 + (puesto % 2) * 8, `tropa_${tipo}_0`);
         sprite.setOrigin(0.5, 1);
-        sprite.setScale(0.85);
+        sprite.setScale(this.escalaTropa);
         sprite.setDepth(10);
         this.cargarYAnimarTropa(sprite, tipo);
         this.tropasAtacante.push(sprite);
