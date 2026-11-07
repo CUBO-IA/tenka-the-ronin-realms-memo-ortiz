@@ -10,6 +10,13 @@ import { crearEmparejamiento, consumirEmparejamiento } from './emparejamiento.js
 import { ErrorDeJuego } from './errores.js';
 import { crearRonin, roninDeUsuario } from './ronin.js';
 import {
+  crearMensajeInicial,
+  ejecutarAccion,
+  obtenerEdificios,
+  obtenerRecursos,
+  ultimoMensaje,
+} from './acciones.js';
+import {
   COOKIE_COMPUTADORA,
   COOKIE_MOVIL,
   borrarSesion,
@@ -223,12 +230,20 @@ export function crearApp({ db }) {
     if (!req.sesionComputadora) {
       return res.json({ usuario: null, ronin: null });
     }
+    const ronin = roninDeUsuario(db, req.sesionComputadora.usuarioId);
     res.json({
       usuario: {
         id: req.sesionComputadora.usuarioId,
         nombre: req.sesionComputadora.nombre,
       },
-      ronin: roninDeUsuario(db, req.sesionComputadora.usuarioId),
+      ronin,
+      ...(ronin
+        ? {
+            recursos: obtenerRecursos(db, ronin.id),
+            edificios: obtenerEdificios(db, ronin.id),
+            mensaje: ultimoMensaje(db, ronin.id),
+          }
+        : {}),
     });
   });
 
@@ -261,9 +276,17 @@ export function crearApp({ db }) {
     '/api/yo-movil',
     ruta((req, res) => {
       const sesion = exigirSesion(req, ESTADOS.movil);
+      const ronin = roninDeUsuario(db, sesion.usuarioId);
       res.json({
         usuario: { id: sesion.usuarioId, nombre: sesion.nombre },
-        ronin: roninDeUsuario(db, sesion.usuarioId),
+        ronin,
+        ...(ronin
+          ? {
+              recursos: obtenerRecursos(db, ronin.id),
+              edificios: obtenerEdificios(db, ronin.id),
+              mensaje: ultimoMensaje(db, ronin.id),
+            }
+          : {}),
         opciones: catalogoPublico(),
       });
     }),
@@ -274,8 +297,63 @@ export function crearApp({ db }) {
     ruta((req, res) => {
       const sesion = exigirSesion(req, ESTADOS.movil);
       const ronin = crearRonin(db, sesion.usuarioId, req.body);
-      emitirAUsuario(app, sesion.usuarioId, 'ronin:creado', { ronin });
-      res.status(201).json({ ronin });
+      const mensaje = crearMensajeInicial(db, ronin);
+      const recursos = obtenerRecursos(db, ronin.id);
+      const edificios = obtenerEdificios(db, ronin.id);
+
+      emitirAUsuario(app, sesion.usuarioId, 'ronin:creado', {
+        ronin,
+        recursos,
+        edificios,
+        mensaje,
+      });
+      res.status(201).json({ ronin, recursos, edificios, mensaje });
+    }),
+  );
+
+  // Ejecución de órdenes de la era 1 desde el celular
+  app.post(
+    '/api/acciones',
+    ruta((req, res) => {
+      const sesion = exigirSesion(req, ESTADOS.movil);
+      const ronin = roninDeUsuario(db, sesion.usuarioId);
+      if (!ronin) {
+        throw new ErrorDeJuego('Awaken your rōnin first.', 404, 'RONIN_NO_ENCONTRADO');
+      }
+
+      const resultado = ejecutarAccion(db, ronin.id, req.body);
+      emitirAUsuario(app, sesion.usuarioId, 'ronin:actualizado', {
+        ronin: resultado.ronin,
+      });
+      emitirAUsuario(app, sesion.usuarioId, 'recursos:actualizados', {
+        recursos: resultado.recursos,
+      });
+      if (resultado.edificios) {
+        emitirAUsuario(app, sesion.usuarioId, 'edificios:actualizados', {
+          edificios: resultado.edificios,
+        });
+      }
+
+      res.status(200).json(resultado);
+    }),
+  );
+
+  // Orden libre por texto (queda lista para el hito 3)
+  app.post(
+    '/api/orden-texto',
+    ruta((req, res) => {
+      const sesion = exigirSesion(req, ESTADOS.movil);
+      const ronin = roninDeUsuario(db, sesion.usuarioId);
+      if (!ronin) {
+        throw new ErrorDeJuego('Awaken your rōnin first.', 404, 'RONIN_NO_ENCONTRADO');
+      }
+
+      res.json({
+        ok: true,
+        interpretada: false,
+        respuesta:
+          'Your rōnin hears your voice. Direct AI conversation will awaken in Era 2. Choose an order from the scrolls above for now.',
+      });
     }),
   );
 

@@ -65,6 +65,8 @@ export function serializarRonin(fila) {
     territorio: fila.territorio,
     era: fila.era,
     estado: fila.estado,
+    tarea: fila.tarea,
+    tareaFin: fila.tarea_fin,
     creado: fila.creado,
   };
 }
@@ -122,9 +124,10 @@ export function crearRonin(db, usuarioId, datos) {
 
   try {
     const roninId = crear();
-    return serializarRonin(
+    const ronin = serializarRonin(
       db.prepare('SELECT * FROM ronin WHERE id = ?').get(roninId),
     );
+    return ronin;
   } catch (error) {
     if (String(error.code).includes('SQLITE_CONSTRAINT')) {
       throw new ErrorDeJuego('Your rōnin is already awake.', 409, 'RONIN_EXISTENTE');

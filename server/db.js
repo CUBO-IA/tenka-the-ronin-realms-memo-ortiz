@@ -85,5 +85,32 @@ function crearEsquema(db) {
       cantidad INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (ronin_id, tipo)
     );
+
+    CREATE TABLE IF NOT EXISTS edificios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ronin_id INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      etapa TEXT NOT NULL CHECK (etapa IN ('cimientos', 'construccion', 'terminado')),
+      progreso INTEGER NOT NULL DEFAULT 0,
+      creado INTEGER NOT NULL,
+      actualizado INTEGER NOT NULL,
+      UNIQUE(ronin_id, tipo)
+    );
+
+    CREATE INDEX IF NOT EXISTS edificios_por_ronin
+      ON edificios(ronin_id);
+
+    CREATE TABLE IF NOT EXISTS mensajes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ronin_id INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      texto TEXT NOT NULL,
+      opciones_json TEXT NOT NULL,
+      creado INTEGER NOT NULL,
+      respondido INTEGER NOT NULL DEFAULT 0,
+      respuesta TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS mensajes_por_ronin
+      ON mensajes(ronin_id, respondido);
   `);
 }

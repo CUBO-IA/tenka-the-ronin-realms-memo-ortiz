@@ -15,6 +15,7 @@ try {
 const { crearApp } = await import('./app.js');
 const { abrirDb } = await import('./db.js');
 const { configurarSocket } = await import('./socket.js');
+const { iniciarReloj } = await import('./reloj.js');
 
 const db = abrirDb();
 const app = crearApp({ db });
@@ -23,6 +24,7 @@ const io = new Server(servidor);
 
 app.locals.io = io;
 configurarSocket(io, db);
+const reloj = iniciarReloj(db, io, 1000);
 
 const puerto = Number(process.env.PORT || 3000);
 
@@ -34,6 +36,7 @@ servidor.listen(puerto, () => {
 // Cierra SQLite de forma ordenada al detener el proceso.
 for (const senal of ['SIGINT', 'SIGTERM']) {
   process.on(senal, () => {
+    reloj.detener();
     servidor.close(() => {
       db.close();
       process.exit(0);
