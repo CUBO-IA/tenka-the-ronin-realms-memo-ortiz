@@ -59,7 +59,8 @@
 
 .pagina-pc[data-vista="inicio"] .escenario {
   justify-content: flex-start;
-  padding-top: calc(clamp(1.6rem, 7vh, 4.5rem) + 100px);
+  /* El sombrero del rōnin está al 43 % de la altura: el logo se centra en esa franja. */
+  padding-top: 8vh;
   padding-bottom: clamp(3rem, 9vh, 6.5rem);
 }
 
@@ -71,7 +72,7 @@
 }
 
 .logo-tenka {
-  width: clamp(170px, min(22vw, 32vh), 340px);
+  width: clamp(170px, min(22vw, 31vh), 400px);
   height: auto;
   margin: 0 auto;
   filter: drop-shadow(0 2px 3px rgba(20, 15, 10, 0.24));
@@ -158,7 +159,7 @@
 .panel-inicio {
   position: absolute;
   left: 50%;
-  bottom: clamp(1.4rem, 3vh, 2.2rem);
+  bottom: clamp(0.9rem, 2vh, 2rem);
   transform: translateX(-50%);
   width: min(330px, 90vw);
   --marco-madera: 22px;
