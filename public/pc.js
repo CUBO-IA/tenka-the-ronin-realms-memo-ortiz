@@ -23,6 +23,7 @@ import {
   alternarSonido,
   detenerMusica,
   iniciarMusica,
+  iniciarMusicaBatalla,
   prepararSonido,
   sonarCampana,
   sonarCampanaGrande,
@@ -232,6 +233,7 @@ let relojRegreso = null;
 async function seguirMarcha(batalla) {
   clearTimeout(relojRegreso);
   sonarTambores();
+  iniciarMusicaBatalla();
   batallaInicio(batalla);
   await visitar(batalla.defensor.id, `${ronin.nombre} marches on ${batalla.defensor.nombre}'s sanctuary`);
 }

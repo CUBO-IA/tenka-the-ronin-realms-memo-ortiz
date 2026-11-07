@@ -8,7 +8,7 @@ const CUADROS_DE_ATAQUE = { arquero: 3, oni: 3, kitsune: 3, samurai: 0 };
 const CUADROS_DE_PELEA = { 'luz-sombrero': 5, 'sombra-sombrero': 4, 'luz-mono': 5, 'sombra-mono': 5 };
 
 import { piezaDeTocado } from '/recolorear.js';
-import { sonarEspadas, sonarGong, sonarTambores } from '/audio.js';
+import { iniciarMusicaBatalla, sonarEspadas, sonarGong, sonarTambores, terminarMusicaBatalla } from '/audio.js';
 
 export class EscenaSantuario extends Phaser.Scene {
   constructor() {
@@ -727,6 +727,7 @@ export class EscenaSantuario extends Phaser.Scene {
     cartel.setDepth(25);
     this.cartelAtaque = cartel;
     sonarTambores();
+    iniciarMusicaBatalla();
 
     // El defensor sale a recibirlo.
     this.tweens.killTweensOf(this.roninSprite);
@@ -915,6 +916,7 @@ export class EscenaSantuario extends Phaser.Scene {
 
     this.time.delayedCall(3500, () => {
       // Todo vuelve a su lugar: el daño real ya lo mandó el servidor.
+      terminarMusicaBatalla();
       this.terminarAtaque();
       if (this.roninSprite) {
         this.roninSprite.clearTint();

@@ -1,6 +1,6 @@
-// Sonido de la computadora, sintetizado con Web Audio: sin archivos ni
-// licencias. Música tranquila por bando (koto para la luz, dron y shakuhachi
-// para la sombra) y efectos cortos para lo que pasa en el mundo.
+// Sonido de la computadora. La música son pistas de /assets/audio (una por
+// bando y una de batalla) que se mezclan por Web Audio; los efectos cortos
+// (espadas, tambores, gong, campanas) se sintetizan, sin archivos.
 //
 // El navegador no deja sonar nada sin un gesto del usuario: el sonido arranca
 // con el botón "Sound" y la preferencia queda guardada en el navegador.
@@ -14,16 +14,7 @@ const estado = {
   canalMusica: null,
   canalEfectos: null,
   bando: null,
-  reloj: null,
-  musica: null,
   oyentes: new Set(),
-};
-
-// Escalas japonesas: "yo" (pentatónica alegre) para la luz e "in"
-// (hirajōshi, más sombría) para la sombra. Frecuencias en Hz.
-const ESCALAS = {
-  luz: [293.66, 329.63, 392.0, 440.0, 493.88, 587.33, 659.26, 783.99],
-  sombra: [146.83, 155.56, 196.0, 220.0, 233.08, 293.66, 311.13, 392.0],
 };
 
 function ahora() {
@@ -70,7 +61,7 @@ function crearContexto() {
   maestro.gain.value = 0.7;
   maestro.connect(ctx.destination);
   const canalMusica = ctx.createGain();
-  canalMusica.gain.value = 0.45;
+  canalMusica.gain.value = 0.55;
   canalMusica.connect(maestro);
   const canalEfectos = ctx.createGain();
   canalEfectos.gain.value = 0.8;
@@ -89,7 +80,7 @@ export function activarSonido() {
   } catch {
     // Sin almacenamiento, igual suena esta vez.
   }
-  if (estado.bando) iniciarMusica(estado.bando);
+  if (estado.bando) fundir(estado.bando, 1);
   avisar();
   return true;
 }
@@ -150,41 +141,6 @@ function koto(frecuencia, cuando, fuerza = 1, salida = estado.canalMusica) {
   armonico.start(cuando);
   cuerda.stop(cuando + 1.7);
   armonico.stop(cuando + 1.7);
-}
-
-// Flauta de bambú: entra despacio, vibra y se apaga con algo de aire.
-function shakuhachi(frecuencia, cuando, duracion = 1.6, fuerza = 1, salida = estado.canalMusica) {
-  const ctx = estado.ctx;
-  const ganancia = ctx.createGain();
-  ganancia.gain.setValueAtTime(0.0001, cuando);
-  ganancia.gain.exponentialRampToValueAtTime(0.32 * fuerza, cuando + 0.25);
-  ganancia.gain.setValueAtTime(0.32 * fuerza, cuando + duracion - 0.45);
-  ganancia.gain.exponentialRampToValueAtTime(0.0001, cuando + duracion);
-  const voz = ctx.createOscillator();
-  voz.type = 'sine';
-  voz.frequency.setValueAtTime(frecuencia * 0.985, cuando);
-  voz.frequency.exponentialRampToValueAtTime(frecuencia, cuando + 0.2);
-  const vibrato = ctx.createOscillator();
-  vibrato.frequency.value = 5;
-  const profundidad = ctx.createGain();
-  profundidad.gain.setValueAtTime(0, cuando);
-  profundidad.gain.linearRampToValueAtTime(frecuencia * 0.012, cuando + 0.6);
-  vibrato.connect(profundidad).connect(voz.frequency);
-  // Aire: ruido angosto alrededor de la nota.
-  const aire = ruido(duracion);
-  const filtroAire = ctx.createBiquadFilter();
-  filtroAire.type = 'bandpass';
-  filtroAire.frequency.value = frecuencia * 2;
-  filtroAire.Q.value = 12;
-  const gananciaAire = ctx.createGain();
-  gananciaAire.gain.value = 0.12;
-  aire.connect(filtroAire).connect(gananciaAire).connect(ganancia);
-  voz.connect(ganancia).connect(salida);
-  voz.start(cuando);
-  vibrato.start(cuando);
-  aire.start(cuando);
-  voz.stop(cuando + duracion + 0.05);
-  vibrato.stop(cuando + duracion + 0.05);
 }
 
 // Tambor grave: un golpe que baja de tono, con el chasquido del parche.
@@ -328,112 +284,95 @@ export function sonarGong(victoria = true) {
   }
 }
 
-// ---------- Música de santuario ----------
+// ---------- Música ----------
 
-function elegirNota(escala, anterior) {
-  // Paso pequeño casi siempre, salto de vez en cuando: suena a melodía.
-  if (anterior == null || Math.random() < 0.18) return Math.floor(Math.random() * escala.length);
-  const paso = Math.random() < 0.5 ? -1 : 1;
-  const salto = Math.random() < 0.25 ? 2 : 1;
-  return Math.max(0, Math.min(escala.length - 1, anterior + paso * salto));
+const PISTAS = {
+  luz: '/assets/audio/musica-luz.mp3',
+  sombra: '/assets/audio/musica-sombra.mp3',
+  batalla: '/assets/audio/musica-batalla.mp3',
+};
+const pistas = new Map();
+let pistaActual = null;
+
+// Cada pista es un <audio> en loop enchufado al canal de música, con su
+// propia ganancia para fundir entre una y otra.
+function pista(nombre) {
+  if (pistas.has(nombre)) return pistas.get(nombre);
+  const elemento = new Audio(PISTAS[nombre]);
+  elemento.loop = true;
+  elemento.preload = 'auto';
+  elemento.crossOrigin = 'anonymous';
+  const ganancia = estado.ctx.createGain();
+  ganancia.gain.value = 0.0001;
+  estado.ctx.createMediaElementSource(elemento).connect(ganancia).connect(estado.canalMusica);
+  const datos = { elemento, ganancia };
+  pistas.set(nombre, datos);
+  return datos;
 }
 
-function musicaLuz() {
-  const escala = ESCALAS.luz;
-  let siguiente = ahora() + 0.3;
-  let indice = null;
-  let pulso = 0;
-  const paso = 0.5;
-  return {
-    programar(hasta) {
-      while (siguiente < hasta) {
-        const t = siguiente;
-        if (pulso % 8 === 0) koto(escala[0] / 2, t, 0.55);
-        if (Math.random() < 0.6) {
-          indice = elegirNota(escala, indice);
-          koto(escala[indice], t, 0.65 + Math.random() * 0.25);
-        }
-        if (pulso % 16 === 12 && Math.random() < 0.5) campana(1760, t, 2, 0.12, estado.canalMusica);
-        pulso += 1;
-        siguiente += paso * (Math.random() < 0.15 ? 2 : 1);
-      }
-    },
-    detener() {},
-  };
+function fundir(nombre, duracion = 1.5) {
+  if (!listo() || !PISTAS[nombre]) return;
+  if (pistaActual === nombre) return;
+  const t = ahora();
+  if (pistaActual && pistas.has(pistaActual)) {
+    const saliente = pistas.get(pistaActual);
+    saliente.ganancia.gain.cancelScheduledValues(t);
+    saliente.ganancia.gain.setValueAtTime(Math.max(saliente.ganancia.gain.value, 0.0001), t);
+    saliente.ganancia.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
+    const elemento = saliente.elemento;
+    setTimeout(() => {
+      if (pistaActual !== nombre) return;
+      elemento.pause();
+    }, duracion * 1000 + 50);
+  }
+  const entrante = pista(nombre);
+  entrante.ganancia.gain.cancelScheduledValues(t);
+  entrante.ganancia.gain.setValueAtTime(0.0001, t);
+  entrante.ganancia.gain.exponentialRampToValueAtTime(1, t + duracion);
+  entrante.elemento.play().catch(() => {});
+  pistaActual = nombre;
 }
 
-function musicaSombra() {
-  const ctx = estado.ctx;
-  const escala = ESCALAS.sombra;
-  // Dron grave y constante, con un filtro que respira.
-  const salidaDron = ctx.createGain();
-  salidaDron.gain.setValueAtTime(0.0001, ahora());
-  salidaDron.gain.exponentialRampToValueAtTime(0.12, ahora() + 3);
-  const filtro = ctx.createBiquadFilter();
-  filtro.type = 'lowpass';
-  filtro.frequency.value = 220;
-  const respiracion = ctx.createOscillator();
-  respiracion.frequency.value = 0.07;
-  const profundidad = ctx.createGain();
-  profundidad.gain.value = 90;
-  respiracion.connect(profundidad).connect(filtro.frequency);
-  respiracion.start();
-  const voces = [-6, 5].map((centavos) => {
-    const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.value = 73.42;
-    osc.detune.value = centavos;
-    osc.connect(filtro);
-    osc.start();
-    return osc;
-  });
-  filtro.connect(salidaDron).connect(estado.canalMusica);
-
-  let siguienteNota = ahora() + 2;
-  let siguienteTambor = ahora() + 1.5;
-  let indice = null;
-  return {
-    programar(hasta) {
-      while (siguienteNota < hasta) {
-        indice = elegirNota(escala, indice);
-        const duracion = 1.4 + Math.random() * 1.8;
-        shakuhachi(escala[indice] * 2, siguienteNota, duracion, 0.5 + Math.random() * 0.3);
-        siguienteNota += duracion + 1.5 + Math.random() * 3;
-      }
-      while (siguienteTambor < hasta) {
-        taiko(siguienteTambor, 0.22, estado.canalMusica);
-        taiko(siguienteTambor + 0.36, 0.14, estado.canalMusica);
-        siguienteTambor += 3.6;
-      }
-    },
-    detener() {
-      const t = ahora();
-      salidaDron.gain.cancelScheduledValues(t);
-      salidaDron.gain.setValueAtTime(salidaDron.gain.value, t);
-      salidaDron.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
-      for (const osc of voces) osc.stop(t + 1.3);
-      respiracion.stop(t + 1.3);
-    },
-  };
-}
-
-// Arranca (o cambia) la música del bando que está en pantalla.
+// La música del bando que está en pantalla (si hay batalla, espera a que termine).
 export function iniciarMusica(bando) {
   if (bando !== 'luz' && bando !== 'sombra') return;
-  const mismo = estado.bando === bando && estado.musica;
   estado.bando = bando;
-  if (!listo() || mismo) return;
-  detenerMusica(false);
-  estado.musica = bando === 'luz' ? musicaLuz() : musicaSombra();
-  const programar = () => estado.musica && estado.musica.programar(ahora() + 1.2);
-  programar();
-  estado.reloj = setInterval(programar, 400);
+  if (pistaActual === 'batalla') return;
+  fundir(bando, 2);
+}
+
+// Tambores y cuerdas de guerra mientras dura la pelea.
+export function iniciarMusicaBatalla() {
+  fundir('batalla', 0.8);
+}
+
+// Terminó la pelea: vuelve la música del santuario que se está viendo.
+export function terminarMusicaBatalla() {
+  if (pistaActual !== 'batalla') return;
+  if (estado.bando) {
+    pistaActual = null;
+    fundir(estado.bando, 2.5);
+    const batalla = pistas.get('batalla');
+    if (batalla) {
+      const t = ahora();
+      batalla.ganancia.gain.cancelScheduledValues(t);
+      batalla.ganancia.gain.setValueAtTime(Math.max(batalla.ganancia.gain.value, 0.0001), t);
+      batalla.ganancia.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+      setTimeout(() => {
+        if (pistaActual !== 'batalla') batalla.elemento.pause();
+      }, 2600);
+    }
+  } else {
+    detenerMusica();
+  }
 }
 
 export function detenerMusica(olvidarBando = true) {
-  if (estado.reloj) clearInterval(estado.reloj);
-  estado.reloj = null;
-  if (estado.musica) estado.musica.detener();
-  estado.musica = null;
+  for (const { elemento, ganancia } of pistas.values()) {
+    ganancia.gain.cancelScheduledValues(ahora());
+    ganancia.gain.value = 0.0001;
+    elemento.pause();
+  }
+  pistaActual = null;
   if (olvidarBando) estado.bando = null;
 }
