@@ -24,16 +24,16 @@ export class EscenaMapa extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('fondo_mapa', '/assets/fondo-mapa.jpg');
+    if (!this.textures.exists('fondo_mapa')) this.load.image('fondo_mapa', '/assets/fondo-mapa.jpg');
     for (const bando of ['luz', 'sombra']) {
       for (const tipo of EDIFICIOS[bando]) {
         for (const etapa of ETAPAS) {
-          this.load.image(`edificio_${bando}_${tipo}_${etapa}`, `/assets/edificio-${bando}-${tipo}-${etapa}.png`);
+          if (!this.textures.exists(`edificio_${bando}_${tipo}_${etapa}`)) this.load.image(`edificio_${bando}_${tipo}_${etapa}`, `/assets/edificio-${bando}-${tipo}-${etapa}.png`);
         }
       }
     }
     for (const ronin of this.mundo.ronin) {
-      this.load.image(`kamon_${ronin.kamon}`, `/assets/kamon-${ronin.kamon}.png`);
+      if (!this.textures.exists(`kamon_${ronin.kamon}`)) this.load.image(`kamon_${ronin.kamon}`, `/assets/kamon-${ronin.kamon}.png`);
     }
   }
 

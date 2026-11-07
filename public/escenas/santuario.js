@@ -77,7 +77,7 @@ export class EscenaSantuario extends Phaser.Scene {
 
   preload() {
     // 1. Fondo del santuario
-    this.load.image(`fondo_${this.bando}`, `/assets/fondo-${this.bando}.jpg`);
+    if (!this.textures.exists(`fondo_${this.bando}`)) this.load.image(`fondo_${this.bando}`, `/assets/fondo-${this.bando}.jpg`);
 
     // 2. Edificios de la Era 1 (3 etapas: cimientos, construccion, terminado)
     const edificiosBando =
@@ -88,7 +88,7 @@ export class EscenaSantuario extends Phaser.Scene {
     // Tropas del bando (4 cuadros de marcha)
     for (const tipo of this.tiposTropa) {
       for (let i = 0; i < 4; i += 1) {
-        this.load.image(`tropa_${tipo}_${i}`, `/assets/tropa-${tipo}-caminar-${i}.png`);
+        if (!this.textures.exists(`tropa_${tipo}_${i}`)) this.load.image(`tropa_${tipo}_${i}`, `/assets/tropa-${tipo}-caminar-${i}.png`);
       }
     }
 
@@ -96,7 +96,7 @@ export class EscenaSantuario extends Phaser.Scene {
     for (const info of Object.values(this.aldeanosPorEdificio)) {
       if (!info.tipo.startsWith(this.bando)) continue;
       for (let i = 0; i < info.cuadros; i += 1) {
-        this.load.image(`aldeano_${info.tipo}_${i}`, `/assets/aldeano-${info.tipo}-${i}.png`);
+        if (!this.textures.exists(`aldeano_${info.tipo}_${i}`)) this.load.image(`aldeano_${info.tipo}_${i}`, `/assets/aldeano-${info.tipo}-${i}.png`);
       }
     }
 
@@ -104,7 +104,7 @@ export class EscenaSantuario extends Phaser.Scene {
       for (const etapa of ['cimientos', 'construccion', 'terminado']) {
         const clave = `edificio_${this.bando}_${tipo}_${etapa}`;
         const ruta = `/assets/edificio-${this.bando}-${tipo}-${etapa}.png`;
-        this.load.image(clave, ruta);
+        if (!this.textures.exists(clave)) this.load.image(clave, ruta);
       }
     }
 
@@ -118,8 +118,8 @@ export class EscenaSantuario extends Phaser.Scene {
     for (const [anim, total] of Object.entries(this.conteoCuadros)) {
       for (let i = 0; i < total; i++) {
         const base = `ronin-${this.claveVariacion}-${anim}-${i}`;
-        this.load.image(`${base}_img`, `/assets/${base}.png`);
-        this.load.image(`${base}_mask`, `/assets/${base}-mascara.png`);
+        if (!this.textures.exists(`${base}_img`)) this.load.image(`${base}_img`, `/assets/${base}.png`);
+        if (!this.textures.exists(`${base}_mask`)) this.load.image(`${base}_mask`, `/assets/${base}-mascara.png`);
       }
     }
   }

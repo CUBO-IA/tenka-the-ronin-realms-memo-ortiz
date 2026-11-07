@@ -291,11 +291,13 @@ export async function interpretarOrden(db, ronin, texto, ahora = Date.now()) {
   const decision = await decidir(db, ronin, 'orden_libre', { texto }, ahora);
   if (decision) {
     mensaje = decision.mensaje;
-    // Solo se ejecuta si la IA marcó la charla como orden; si no lo dijo, las
-    // palabras clave deciden. Una pregunta nunca mueve al rōnin.
+    // El maestro manda: si la IA marcó orden, se ejecuta su elección; si no,
+    // las palabras clave deciden (el rōnin puede opinar, pero obedece). Solo
+    // una pregunta (termina en "?") se queda en charla.
+    const esPregunta = /\?\s*$/.test(texto.trim());
     if (decision.ejecutar === true) elegida = decision.opciones[0] || null;
-    else if (decision.ejecutar === undefined) elegida = interpretarPorPalabras(texto, validas);
-    else elegida = null;
+    else if (esPregunta) elegida = null;
+    else elegida = interpretarPorPalabras(texto, validas);
   } else {
     elegida = interpretarPorPalabras(texto, validas);
     mensaje = elegida
