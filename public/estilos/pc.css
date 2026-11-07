@@ -675,7 +675,7 @@
   }
 
   .pagina-pc[data-vista="inicio"] .escenario {
-    padding-top: 0.8rem;
+    padding-top: calc(0.8rem + 110px);
     padding-bottom: 2.6rem;
   }
 
