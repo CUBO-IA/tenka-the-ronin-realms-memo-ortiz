@@ -33,13 +33,17 @@ servidor.listen(puerto, () => {
   console.log('Computadora: /  ·  Celular: /m');
 });
 
-// Cierra SQLite de forma ordenada al detener el proceso.
+// Cierra todo al detener el proceso. Los sockets abiertos no pueden dejarlo
+// colgado: si en un segundo no terminó, sale igual.
 for (const senal of ['SIGINT', 'SIGTERM']) {
   process.on(senal, () => {
     reloj.detener();
+    io.close();
+    servidor.closeAllConnections?.();
     servidor.close(() => {
       db.close();
       process.exit(0);
     });
+    setTimeout(() => process.exit(0), 1000).unref();
   });
 }
