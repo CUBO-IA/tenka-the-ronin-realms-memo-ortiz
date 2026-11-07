@@ -45,7 +45,7 @@ export const reglas = {
     timeoutMs: 6000,
     maxPorMinuto: 14, // llamadas totales por minuto, entre todos los rōnin (el plan gratis de Gemini da 15)
     minIntervaloMs: 3000, // mínimo entre dos llamadas del mismo rōnin
-    maxCaracteresMensaje: 240,
+    maxCaracteresMensaje: 320,
     maxCaracteresOrden: 200,
     groqModelo: 'llama-3.3-70b-versatile',
     geminiModelo: 'gemini-3.5-flash-lite',
