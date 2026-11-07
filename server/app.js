@@ -9,6 +9,8 @@ import { iniciarSesion } from './auth.js';
 import { crearEmparejamiento, consumirEmparejamiento } from './emparejamiento.js';
 import { interpretarOrden, mensajeDelRonin } from './agente.js';
 import { borrarSuscripcion, guardarSuscripcion, llavesVapid } from './push.js';
+import { resumenMundo, resumenPorId, santuarioDe } from './mundo.js';
+import { asignarTerritoriosFaltantes } from './territorios.js';
 import { ErrorDeJuego } from './errores.js';
 import { crearRonin, roninDeUsuario } from './ronin.js';
 import {
@@ -51,6 +53,14 @@ function emitirAUsuario(app, usuarioId, evento, datos) {
   const io = app.locals.io;
   if (!io) return;
   io.to(`usuario:${usuarioId}`).emit(evento, datos);
+}
+
+// Lo que cambia en un santuario se ve en el mapa de todas las computadoras.
+function emitirMundo(app, roninId) {
+  const io = app.locals.io;
+  if (!io) return;
+  const resumen = resumenPorId(app.locals.db, roninId);
+  if (resumen) io.emit('mundo:ronin', { ronin: resumen });
 }
 
 // El QR no puede apuntar a localhost: el celular lo abriría en su propia memoria.
@@ -141,6 +151,8 @@ function exigirSesion(req, tipo) {
 
 export function crearApp({ db }) {
   const app = express();
+  app.locals.db = db;
+  asignarTerritoriosFaltantes(db);
 
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
@@ -320,6 +332,7 @@ export function crearApp({ db }) {
         edificios,
         mensaje,
       });
+      emitirMundo(app, ronin.id);
       res.status(201).json({ ronin, recursos, edificios, mensaje });
     }),
   );
@@ -346,8 +359,30 @@ export function crearApp({ db }) {
           edificios: resultado.edificios,
         });
       }
+      emitirMundo(app, ronin.id);
 
       res.status(200).json(resultado);
+    }),
+  );
+
+  // El mapa vivo: todos los santuarios, y el de cualquier jugador para visitarlo.
+  app.get(
+    '/api/mundo',
+    ruta((req, res) => {
+      exigirSesion(req, ESTADOS.computadora);
+      res.json(resumenMundo(db));
+    }),
+  );
+
+  app.get(
+    '/api/santuario/:id',
+    ruta((req, res) => {
+      exigirSesion(req, ESTADOS.computadora);
+      const santuario = santuarioDe(db, Number(req.params.id));
+      if (!santuario) {
+        throw new ErrorDeJuego('That sanctuary does not exist.', 404, 'SANTUARIO_NO_ENCONTRADO');
+      }
+      res.json(santuario);
     }),
   );
 
@@ -430,6 +465,7 @@ export function crearApp({ db }) {
         });
       }
       emitirAUsuario(app, sesion.usuarioId, 'mensaje:nuevo', { mensaje: resultado.mensaje });
+      if (resultado.ronin) emitirMundo(app, ronin.id);
 
       res.json(resultado);
     }),

@@ -956,3 +956,26 @@
     gap: 0.6rem;
   }
 }
+
+/* Modos de la pantalla del mundo: propio, mapa, visita */
+#pantalla-santuario[data-modo="mapa"] .hud-recursos,
+#pantalla-santuario[data-modo="mapa"] .hud-estado,
+#pantalla-santuario[data-modo="mapa"] .hud-mensaje,
+#pantalla-santuario[data-modo="visita"] .hud-recursos,
+#pantalla-santuario[data-modo="visita"] .hud-estado,
+#pantalla-santuario[data-modo="visita"] .hud-mensaje {
+  display: none;
+}
+
+.hud-aviso {
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+#pantalla-santuario[data-modo="propio"] .hud-aviso {
+  display: none;
+}

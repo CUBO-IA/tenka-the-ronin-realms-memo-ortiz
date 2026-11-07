@@ -3,6 +3,7 @@
 // del servidor por la API y por Socket.IO.
 
 import { EscenaSantuario } from '/escenas/santuario.js';
+import { EscenaMapa } from '/escenas/mapa.js';
 import { aplicarKamon } from '/recolorear.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -50,6 +51,31 @@ function escena() {
   return juego?.scene?.getScene('Santuario') || null;
 }
 
+function escenaMapa() {
+  return juego?.scene?.getScene('Mapa') || null;
+}
+
+let modo = 'propio';
+
+function ponerModo(nuevo) {
+  modo = nuevo;
+  const pantalla = document.getElementById('pantalla-santuario');
+  pantalla.dataset.modo = nuevo;
+  document.getElementById('btn-mapa').classList.toggle('oculto', nuevo === 'mapa');
+  document.getElementById('btn-mi-santuario').classList.toggle('oculto', nuevo === 'propio');
+}
+
+function detenerEscenas(partida) {
+  for (const clave of ['Santuario', 'Mapa']) {
+    if (partida.scene.isActive(clave)) partida.scene.stop(clave);
+  }
+}
+
+function cuandoListo(partida, accion) {
+  if (partida.isBooted) accion();
+  else partida.events.once('ready', accion);
+}
+
 function crearJuego() {
   if (juego) return juego;
   juego = new Phaser.Game({
@@ -63,7 +89,7 @@ function crearJuego() {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [EscenaSantuario],
+    scene: [EscenaSantuario, EscenaMapa],
   });
   return juego;
 }
@@ -86,16 +112,52 @@ export function mostrarSantuario(estado) {
     hakamaColor: colores?.hakama,
   };
 
+  ponerModo('propio');
   const partida = crearJuego();
-  const iniciar = () => {
-    if (partida.scene.isActive('Santuario')) {
-      partida.scene.stop('Santuario');
-    }
+  cuandoListo(partida, () => {
+    detenerEscenas(partida);
     partida.scene.start('Santuario', datos);
-  };
+  });
+}
 
-  if (partida.isBooted) iniciar();
-  else partida.events.once('ready', iniciar);
+// La isla con todos los santuarios. Clic en uno para visitarlo.
+export function mostrarMapa(mundo, alSeleccionar) {
+  ponerModo('mapa');
+  $('#hud-aviso').textContent = 'The Isle of Tenka · tap a sanctuary to visit it';
+  $('#hud-nombre').textContent = 'The island';
+  $('#hud-camino').textContent = `${mundo.ronin.length} rōnin awake`;
+  const partida = crearJuego();
+  cuandoListo(partida, () => {
+    detenerEscenas(partida);
+    partida.scene.start('Mapa', { mundo, propioId: estadoActual.ronin?.id || null, alSeleccionar });
+  });
+}
+
+export function actualizarMapa(resumen) {
+  escenaMapa()?.actualizarRonin(resumen);
+}
+
+// El santuario de otro jugador: se ve, no se manda.
+export function visitarSantuario(santuario, colores) {
+  ponerModo('visita');
+  const { ronin } = santuario;
+  $('#hud-aviso').textContent = `Visiting ${ronin.nombre}'s sanctuary · ${santuario.territorio?.nombre || ''}`;
+  renderIdentidad(ronin);
+  const partida = crearJuego();
+  cuandoListo(partida, () => {
+    detenerEscenas(partida);
+    partida.scene.start('Santuario', {
+      ronin,
+      edificios: santuario.edificios,
+      recursos: {},
+      kimonoColor: colores?.kimono,
+      hakamaColor: colores?.hakama,
+    });
+  });
+}
+
+export function modoActual() {
+  return modo;
 }
 
 export function ocultarSantuario() {
@@ -103,16 +165,14 @@ export function ocultarSantuario() {
     clearInterval(relojTarea);
     relojTarea = null;
   }
-  if (juego?.scene?.isActive('Santuario')) {
-    juego.scene.stop('Santuario');
-  }
+  if (juego) detenerEscenas(juego);
 }
 
 export function actualizarRonin(ronin) {
   if (!ronin) return;
   estadoActual.ronin = ronin;
   renderEstado(ronin);
-  escena()?.actualizarRonin(ronin);
+  if (modo === 'propio') escena()?.actualizarRonin(ronin);
 }
 
 export function actualizarRecursos(recursos) {
@@ -124,7 +184,7 @@ export function actualizarRecursos(recursos) {
 export function actualizarEdificios(edificios) {
   if (!Array.isArray(edificios)) return;
   estadoActual.edificios = edificios;
-  escena()?.actualizarEdificios(edificios);
+  if (modo === 'propio') escena()?.actualizarEdificios(edificios);
 }
 
 export function actualizarEdificio(edificio) {
@@ -132,14 +192,14 @@ export function actualizarEdificio(edificio) {
   const lista = estadoActual.edificios.filter((e) => e.tipo !== edificio.tipo);
   lista.push(edificio);
   estadoActual.edificios = lista;
-  escena()?.actualizarEdificio(edificio);
+  if (modo === 'propio') escena()?.actualizarEdificio(edificio);
 }
 
 export function mostrarMensaje(mensaje) {
   if (!mensaje) return;
   estadoActual.mensaje = mensaje;
   renderMensaje(mensaje);
-  escena()?.mostrarGlobo(mensaje.texto);
+  if (modo === 'propio') escena()?.mostrarGlobo(mensaje.texto);
 }
 
 function renderIdentidad(ronin) {

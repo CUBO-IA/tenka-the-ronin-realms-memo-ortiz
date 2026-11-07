@@ -10,6 +10,7 @@ import {
   kimonoPorId,
 } from './catalogo.js';
 import { ErrorDeJuego, camposDeZod, primerMensajeDeZod } from './errores.js';
+import { territorioLibre } from './territorios.js';
 
 const esquemaRonin = z.object({
   nombre: z
@@ -94,11 +95,14 @@ export function crearRonin(db, usuarioId, datos) {
   const bando = bandoPorId(limpio.bando);
 
   const crear = db.transaction(() => {
+    // El primer territorio libre de su bando; si no queda ninguno, nace sin
+    // tierra y el mapa lo ubica cuando se libere una.
+    const territorio = territorioLibre(db, bando.id);
     const info = db
       .prepare(
         `INSERT INTO ronin
-           (usuario_id, nombre, bando, kimono, hakama, tocado, kamon, era, estado, creado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'despierto', ?)`,
+           (usuario_id, nombre, bando, kimono, hakama, tocado, kamon, territorio, era, estado, creado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'despierto', ?)`,
       )
       .run(
         usuarioId,
@@ -108,6 +112,7 @@ export function crearRonin(db, usuarioId, datos) {
         limpio.hakama,
         limpio.tocado,
         limpio.kamon,
+        territorio?.id || null,
         ahora,
       );
 

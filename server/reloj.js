@@ -1,6 +1,7 @@
 import { edificioPorTipo, obtenerRecursos } from './acciones.js';
 import { mensajeDelRonin } from './agente.js';
 import { enviarPush } from './push.js';
+import { resumenPorId } from './mundo.js';
 import { reglas } from './reglas.js';
 import { serializarRonin } from './ronin.js';
 
@@ -88,6 +89,7 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
         });
       }
       io.to(sala).emit('mensaje:nuevo', { mensaje: nuevoMensaje });
+      if (typeof io.emit === 'function') io.emit('mundo:ronin', { ronin: resumenPorId(db, ronin.id) });
     }
 
     // Aviso al celular aunque esté bloqueado. No espera ni detiene el reloj.

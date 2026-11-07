@@ -226,6 +226,10 @@ def extraer_fondos() -> None:
         santuario = abrir(ARTE / f"fondo-{bando}.png")
         _guardar(santuario.resize((1920, 1072), Image.Resampling.LANCZOS), f"fondo-{bando}.jpg")
 
+    # La isla vista desde arriba, para el mapa vivo
+    mapa = abrir(ARTE / "fondo-mapa.png")
+    _guardar(mapa.resize((1920, 1072), Image.Resampling.LANCZOS), "fondo-mapa.jpg")
+
     print()
 
 
@@ -840,6 +844,9 @@ def main() -> None:
         return
     if "--solo-edificios" in sys.argv:
         extraer_edificios()
+        return
+    if "--solo-fondos" in sys.argv:
+        extraer_fondos()
         return
 
     print(f"Origen: {ARTE}")

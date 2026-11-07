@@ -4,11 +4,14 @@ import { aplicarKamon, cargarPiezas, pintarRonin } from '/recolorear.js';
 import {
   actualizarEdificio,
   actualizarEdificios,
+  actualizarMapa,
   actualizarRecursos,
   actualizarRonin,
+  mostrarMapa,
   mostrarMensaje,
   mostrarSantuario,
   ocultarSantuario,
+  visitarSantuario,
 } from '/santuario-pc.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -35,6 +38,8 @@ const btnSalir = $('#btn-salir');
 const btnEmparejar = $('#btn-emparejar');
 const btnEntrarSantuario = $('#btn-entrar-santuario');
 const btnTelefono = $('#btn-telefono');
+const btnMapa = $('#btn-mapa');
+const btnMiSantuario = $('#btn-mi-santuario');
 const btnSalirSantuario = $('#btn-salir-santuario');
 const pieSesion = $('#pie-sesion');
 
@@ -168,11 +173,38 @@ function etiquetaPorId(lista, id) {
   return lista?.find((elemento) => elemento.id === id)?.etiqueta || id;
 }
 
-function coloresDelRonin() {
-  const bando = catalogo?.bandos?.find((elemento) => elemento.id === ronin.bando);
-  const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
-  const hakama = catalogo?.hakamas?.find((elemento) => elemento.id === ronin.hakama);
+function coloresDe(unRonin) {
+  const bando = catalogo?.bandos?.find((elemento) => elemento.id === unRonin.bando);
+  const kimono = bando?.kimonos?.find((elemento) => elemento.id === unRonin.kimono);
+  const hakama = catalogo?.hakamas?.find((elemento) => elemento.id === unRonin.hakama);
   return { kimono: kimono?.color, hakama: hakama?.color };
+}
+
+function coloresDelRonin() {
+  return coloresDe(ronin);
+}
+
+// La isla: todos los santuarios en vivo.
+async function irAlMapa() {
+  try {
+    const mundo = await api('/api/mundo');
+    mostrarMapa(mundo, (elegido) => visitar(elegido.id));
+  } catch (error) {
+    if (error.estado === 401) volverAlInicio('Your session ended. Sign in again.');
+  }
+}
+
+async function visitar(roninId) {
+  if (ronin && roninId === ronin.id) {
+    irAlSantuario();
+    return;
+  }
+  try {
+    const santuario = await api(`/api/santuario/${roninId}`);
+    visitarSantuario(santuario, coloresDe(santuario.ronin));
+  } catch {
+    // Si no se puede visitar, el mapa sigue en pantalla.
+  }
 }
 
 // El mundo en vivo: fondo del bando, rōnin animado, edificios y su voz.
@@ -295,6 +327,10 @@ function conectarSocket() {
     mundo.mensaje = datos.mensaje;
     mostrarMensaje(datos.mensaje);
   });
+
+  socket.on('mundo:ronin', (datos) => {
+    if (datos?.ronin) actualizarMapa(datos.ronin);
+  });
 }
 
 function volverAlInicio(mensaje = '') {
@@ -376,6 +412,14 @@ btnVolver.addEventListener('click', () => {
 
 btnEntrarSantuario.addEventListener('click', () => {
   clearTimeout(relojTarjeta);
+  irAlSantuario();
+});
+
+btnMapa.addEventListener('click', () => {
+  irAlMapa();
+});
+
+btnMiSantuario.addEventListener('click', () => {
   irAlSantuario();
 });
 
