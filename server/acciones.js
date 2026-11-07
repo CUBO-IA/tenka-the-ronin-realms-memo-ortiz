@@ -158,6 +158,40 @@ export function mensajePredefinido(db, ronin, momento, tarea = null) {
   return crearMensajeInicial(db, ronin);
 }
 
+// Bandeja: los últimos mensajes del rōnin, del más nuevo al más viejo.
+export function listarMensajes(db, roninId, limite = 20) {
+  return db
+    .prepare(
+      'SELECT id, texto, opciones_json, creado, respondido, respuesta, leido FROM mensajes WHERE ronin_id = ? ORDER BY id DESC LIMIT ?',
+    )
+    .all(roninId, limite)
+    .map((fila) => {
+      let opciones = [];
+      try {
+        opciones = JSON.parse(fila.opciones_json);
+      } catch {
+        opciones = [];
+      }
+      return {
+        id: fila.id,
+        texto: fila.texto,
+        opciones,
+        creado: fila.creado,
+        respondido: Boolean(fila.respondido),
+        respuesta: fila.respuesta,
+        leido: Boolean(fila.leido),
+      };
+    });
+}
+
+export function contarNoLeidos(db, roninId) {
+  return db.prepare('SELECT COUNT(*) AS n FROM mensajes WHERE ronin_id = ? AND leido = 0').get(roninId).n;
+}
+
+export function marcarLeidos(db, roninId) {
+  db.prepare('UPDATE mensajes SET leido = 1 WHERE ronin_id = ? AND leido = 0').run(roninId);
+}
+
 export function generarOpciones(db, ronin) {
   const bando = ronin.bando;
   const recursos = obtenerRecursos(db, ronin.id);

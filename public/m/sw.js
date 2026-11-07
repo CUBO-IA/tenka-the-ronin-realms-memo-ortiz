@@ -1,7 +1,7 @@
-// Service worker mínimo para que la web móvil se pueda instalar.
+// Service worker del celular: hace instalable la web y recibe los avisos push.
 // Nunca cachea la API ni el socket: el servidor siempre manda.
 
-const CACHE = 'tenka-movil-v3';
+const CACHE = 'tenka-movil-v4';
 const CAPARAZON = [
   '/m',
   '/m/m.css',
@@ -63,5 +63,39 @@ self.addEventListener('fetch', (evento) => {
         if (evento.request.mode === 'navigate') return caches.match('/m');
         return Response.error();
       }),
+  );
+});
+
+// El rōnin habla aunque el celular esté bloqueado.
+self.addEventListener('push', (evento) => {
+  let carga = {};
+  try {
+    carga = evento.data ? evento.data.json() : {};
+  } catch {
+    carga = { cuerpo: evento.data ? evento.data.text() : '' };
+  }
+
+  evento.waitUntil(
+    self.registration.showNotification(carga.titulo || 'Tenka', {
+      body: carga.cuerpo || 'Your rōnin has something to say.',
+      icon: '/arte/icono.svg',
+      badge: '/arte/icono.svg',
+      tag: carga.tag || 'tenka-ronin',
+      renotify: true,
+      data: { url: carga.url || '/m' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  const destino = evento.notification.data?.url || '/m';
+
+  evento.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
+      const abierta = ventanas.find((ventana) => ventana.url.includes('/m'));
+      if (abierta) return abierta.focus();
+      return self.clients.openWindow(destino);
+    }),
   );
 });

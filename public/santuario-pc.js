@@ -32,6 +32,16 @@ const ETIQUETA_RECURSO = {
 // Orden fijo de la tira de recursos: materiales del bando, arroz y mon.
 const ORDEN_RECURSOS = ['cedro', 'sauce', 'piedra', 'lodo', 'hierro', 'hongos', 'arroz', 'mon'];
 
+const ETIQUETA_EDIFICIO = {
+  casa: "Rōnin's House",
+  granero: 'Granary',
+  torii: 'Torii Gate',
+  altar: 'Altar',
+  choza: "Rōnin's Shack",
+  pozo: 'Well of Mist',
+  circulo: 'Circle of Stones',
+};
+
 let juego = null;
 let relojTarea = null;
 let estadoActual = { ronin: null, recursos: {}, edificios: [], mensaje: null, colores: {} };
@@ -129,6 +139,7 @@ export function mostrarMensaje(mensaje) {
   if (!mensaje) return;
   estadoActual.mensaje = mensaje;
   renderMensaje(mensaje);
+  escena()?.mostrarGlobo(mensaje.texto);
 }
 
 function renderIdentidad(ronin) {
@@ -175,7 +186,8 @@ function descripcionDeTarea(ronin) {
     return `Gathering ${(ETIQUETA_RECURSO[tarea.parametros?.recurso] || 'resources').toLowerCase()}`;
   }
   if (tarea.accion === 'construir') {
-    return `Building the ${tarea.parametros?.edificio || 'sanctuary'}`;
+    const edificio = tarea.parametros?.edificio;
+    return `Building the ${ETIQUETA_EDIFICIO[edificio] || edificio || 'sanctuary'}`;
   }
   if (tarea.accion === 'descansar') return 'Resting';
   return 'Working…';

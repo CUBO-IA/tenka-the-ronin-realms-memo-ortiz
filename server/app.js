@@ -8,6 +8,7 @@ import { catalogoPublico } from './catalogo.js';
 import { iniciarSesion } from './auth.js';
 import { crearEmparejamiento, consumirEmparejamiento } from './emparejamiento.js';
 import { interpretarOrden, mensajeDelRonin } from './agente.js';
+import { borrarSuscripcion, guardarSuscripcion, llavesVapid } from './push.js';
 import { ErrorDeJuego } from './errores.js';
 import { crearRonin, roninDeUsuario } from './ronin.js';
 import {
@@ -15,6 +16,9 @@ import {
   obtenerEdificios,
   obtenerRecursos,
   mensajeActual,
+  listarMensajes,
+  contarNoLeidos,
+  marcarLeidos,
 } from './acciones.js';
 import {
   COOKIE_COMPUTADORA,
@@ -293,6 +297,7 @@ export function crearApp({ db }) {
               recursos: obtenerRecursos(db, ronin.id),
               edificios: obtenerEdificios(db, ronin.id),
               mensaje: mensajeActual(db, ronin),
+              noLeidos: contarNoLeidos(db, ronin.id),
             }
           : {}),
         opciones: catalogoPublico(),
@@ -343,6 +348,57 @@ export function crearApp({ db }) {
       }
 
       res.status(200).json(resultado);
+    }),
+  );
+
+  // Bandeja del celular: historial y marcar como leído.
+  app.get(
+    '/api/mensajes',
+    ruta((req, res) => {
+      const sesion = exigirSesion(req, ESTADOS.movil);
+      const ronin = roninDeUsuario(db, sesion.usuarioId);
+      if (!ronin) {
+        throw new ErrorDeJuego('Awaken your rōnin first.', 404, 'RONIN_NO_ENCONTRADO');
+      }
+      res.json({
+        mensajes: listarMensajes(db, ronin.id, 30),
+        noLeidos: contarNoLeidos(db, ronin.id),
+      });
+    }),
+  );
+
+  app.post(
+    '/api/mensajes/leidos',
+    ruta((req, res) => {
+      const sesion = exigirSesion(req, ESTADOS.movil);
+      const ronin = roninDeUsuario(db, sesion.usuarioId);
+      if (ronin) marcarLeidos(db, ronin.id);
+      res.json({ ok: true, noLeidos: 0 });
+    }),
+  );
+
+  // Push: la llave pública para suscribirse y el registro del celular.
+  app.get('/api/push/clave', (req, res) => {
+    res.json({ clave: llavesVapid(db).publica });
+  });
+
+  app.post(
+    '/api/push/suscribir',
+    ruta((req, res) => {
+      const sesion = exigirSesion(req, ESTADOS.movil);
+      if (!guardarSuscripcion(db, sesion.usuarioId, req.body)) {
+        throw new ErrorDeJuego('That subscription is not valid.', 400, 'SUSCRIPCION_INVALIDA');
+      }
+      res.status(201).json({ ok: true });
+    }),
+  );
+
+  app.delete(
+    '/api/push/suscribir',
+    ruta((req, res) => {
+      exigirSesion(req, ESTADOS.movil);
+      if (typeof req.body?.endpoint === 'string') borrarSuscripcion(db, req.body.endpoint);
+      res.json({ ok: true });
     }),
   );
 

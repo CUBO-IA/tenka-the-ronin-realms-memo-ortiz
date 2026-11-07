@@ -26,6 +26,12 @@ function migrar(db) {
     db.exec("ALTER TABLE ronin RENAME COLUMN faja TO hakama");
     db.exec("UPDATE ronin SET hakama = 'negro'");
   }
+
+  // Bandeja del celular: los mensajes guardan si el maestro ya los leyó.
+  const columnasMensajes = db.prepare('PRAGMA table_info(mensajes)').all().map((columna) => columna.name);
+  if (columnasMensajes.length && !columnasMensajes.includes('leido')) {
+    db.exec('ALTER TABLE mensajes ADD COLUMN leido INTEGER NOT NULL DEFAULT 0');
+  }
 }
 
 function crearEsquema(db) {
@@ -107,7 +113,20 @@ function crearEsquema(db) {
       opciones_json TEXT NOT NULL,
       creado INTEGER NOT NULL,
       respondido INTEGER NOT NULL DEFAULT 0,
-      respuesta TEXT
+      respuesta TEXT,
+      leido INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS suscripciones_push (
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      llaves_json TEXT NOT NULL,
+      creado INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS config (
+      clave TEXT PRIMARY KEY,
+      valor TEXT NOT NULL
     );
 
     CREATE INDEX IF NOT EXISTS mensajes_por_ronin

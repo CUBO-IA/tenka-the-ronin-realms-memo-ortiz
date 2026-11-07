@@ -71,6 +71,10 @@
               <p class="antetitulo" id="ordenes-camino">Light path · Era 1</p>
               <h2 id="ordenes-titulo">Your Rōnin</h2>
             </div>
+            <button id="btn-bandeja" class="boton-bandeja" type="button" aria-label="His words">
+              <span class="kanji" aria-hidden="true">文</span>
+              <span id="bandeja-contador" class="contador oculto">0</span>
+            </button>
           </div>
 
           <!-- Tira de recursos del santuario -->
@@ -122,6 +126,38 @@
             </div>
             <p id="respuesta-orden-libre" class="respuesta-orden-libre oculto" role="status"></p>
           </form>
+
+          <!-- Instalar la app para la experiencia completa (avisos con el celular bloqueado) -->
+          <div id="tarjeta-instalar" class="tarjeta-instalar oculto">
+            <p class="antetitulo">Full experience</p>
+            <p id="instalar-texto">
+              Install Tenka on your phone and your rōnin will reach you even when the screen is locked.
+            </p>
+            <ol id="instalar-pasos-ios" class="instalar-pasos oculto">
+              <li>Tap <b>Share</b> in Safari</li>
+              <li>Choose <b>Add to Home Screen</b></li>
+              <li>Open Tenka from your home screen</li>
+            </ol>
+            <div class="tarjeta-instalar-acciones">
+              <button id="btn-instalar" class="boton-laca oculto" type="button">Install</button>
+              <button id="btn-avisos" class="boton-laca oculto" type="button">Enable alerts</button>
+              <button id="btn-cerrar-instalar" class="boton-texto" type="button">Not now</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bandeja: todo lo que el rōnin dijo -->
+      <section id="bandeja" class="bandeja oculto" aria-label="His words">
+        <div class="bandeja-panel marco-madera">
+          <div class="bandeja-cabecera">
+            <div>
+              <p class="antetitulo">The scrolls</p>
+              <h2>His words</h2>
+            </div>
+            <button id="btn-cerrar-bandeja" class="boton-texto" type="button">Close</button>
+          </div>
+          <ul id="bandeja-lista" class="bandeja-lista"></ul>
         </div>
       </section>
 

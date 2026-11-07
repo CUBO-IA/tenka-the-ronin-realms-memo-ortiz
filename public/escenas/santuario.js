@@ -402,6 +402,64 @@ export class EscenaSantuario extends Phaser.Scene {
     }
   }
 
+  // Globo de diálogo sobre el rōnin: lo que le dice a su maestro, para que
+  // el público lo vea aunque el maestro mire el celular.
+  mostrarGlobo(texto) {
+    if (!this.roninSprite || !texto) return;
+    this.ocultarGlobo();
+
+    const anchoMax = 380;
+    const etiqueta = this.add.text(0, 0, texto, {
+      fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif',
+      fontSize: '26px',
+      fontStyle: 'italic',
+      color: '#241f18',
+      align: 'center',
+      wordWrap: { width: anchoMax - 40 },
+    });
+    etiqueta.setOrigin(0.5, 1);
+
+    const ancho = etiqueta.width + 40;
+    const alto = etiqueta.height + 28;
+    const fondo = this.add.graphics();
+    fondo.fillStyle(0xfdfaf2, 0.96);
+    fondo.lineStyle(3, 0x5a4a2a, 0.9);
+    fondo.fillRoundedRect(-ancho / 2, -alto - 14, ancho, alto, 10);
+    fondo.strokeRoundedRect(-ancho / 2, -alto - 14, ancho, alto, 10);
+    fondo.fillTriangle(-12, -14, 12, -14, 0, 0);
+    etiqueta.setPosition(0, -28);
+
+    this.globo = this.add.container(0, 0, [fondo, etiqueta]);
+    this.globo.setDepth(20);
+    this.globo.setAlpha(0);
+    this.ubicarGlobo();
+    this.tweens.add({ targets: this.globo, alpha: 1, duration: 250 });
+
+    this.temporizadorGlobo = this.time.delayedCall(8000, () => this.ocultarGlobo());
+  }
+
+  ubicarGlobo() {
+    if (!this.globo || !this.roninSprite) return;
+    const alto = this.roninSprite.displayHeight;
+    const x = Phaser.Math.Clamp(this.roninSprite.x, 220, 1700);
+    this.globo.setPosition(x, this.roninSprite.y - alto - 10);
+  }
+
+  ocultarGlobo() {
+    if (this.temporizadorGlobo) {
+      this.temporizadorGlobo.remove(false);
+      this.temporizadorGlobo = null;
+    }
+    if (this.globo) {
+      this.globo.destroy();
+      this.globo = null;
+    }
+  }
+
+  update() {
+    this.ubicarGlobo();
+  }
+
   // Un edificio cambió de etapa o progreso: se reemplaza en la lista y se redibuja.
   actualizarEdificio(edificio) {
     if (!edificio) return;

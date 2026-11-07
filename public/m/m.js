@@ -34,6 +34,223 @@ const estado = {
 let opciones = null;
 let enviando = false;
 let tokenPreview = 0;
+let noLeidos = 0;
+
+// --- La voz del rōnin: sonido y vibración al llegar un mensaje ---
+let audio = null;
+
+function prepararAudio() {
+  if (audio || !('AudioContext' in window)) return;
+  audio = new AudioContext();
+}
+
+// Una campanita corta, dibujada en código: no hace falta ningún archivo.
+function sonarCampana() {
+  if (!audio) return;
+  try {
+    if (audio.state === 'suspended') audio.resume();
+    const ahora = audio.currentTime;
+    for (const [tono, inicio] of [[880, 0], [1320, 0.12]]) {
+      const osc = audio.createOscillator();
+      const gan = audio.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = tono;
+      gan.gain.setValueAtTime(0.0001, ahora + inicio);
+      gan.gain.exponentialRampToValueAtTime(0.25, ahora + inicio + 0.02);
+      gan.gain.exponentialRampToValueAtTime(0.0001, ahora + inicio + 0.9);
+      osc.connect(gan).connect(audio.destination);
+      osc.start(ahora + inicio);
+      osc.stop(ahora + inicio + 1);
+    }
+  } catch {
+    // Sin audio no pasa nada: el mensaje igual se ve.
+  }
+}
+
+function avisarMensajeNuevo() {
+  sonarCampana();
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+}
+
+window.addEventListener('pointerdown', prepararAudio, { once: true });
+
+function renderContador() {
+  const contador = $('#bandeja-contador');
+  if (!contador) return;
+  contador.textContent = String(noLeidos);
+  contador.classList.toggle('oculto', noLeidos <= 0);
+}
+
+async function marcarLeidos() {
+  noLeidos = 0;
+  renderContador();
+  try {
+    await api('/api/mensajes/leidos', { method: 'POST' });
+  } catch {
+    // Si falla, el contador se corrige en la próxima carga.
+  }
+}
+
+function tiempoRelativo(ms) {
+  const segundos = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (segundos < 60) return 'just now';
+  const minutos = Math.round(segundos / 60);
+  if (minutos < 60) return `${minutos} min ago`;
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) return `${horas} h ago`;
+  return new Date(ms).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+}
+
+async function abrirBandeja() {
+  const lista = $('#bandeja-lista');
+  lista.innerHTML = '<li class="bandeja-vacia">Unrolling the scrolls…</li>';
+  $('#bandeja').classList.remove('oculto');
+
+  try {
+    const datos = await api('/api/mensajes');
+    lista.innerHTML = '';
+    if (!datos.mensajes.length) {
+      lista.innerHTML = '<li class="bandeja-vacia">Your rōnin has not spoken yet.</li>';
+    }
+    for (const mensaje of datos.mensajes) {
+      const item = document.createElement('li');
+      if (!mensaje.leido) item.classList.add('nuevo');
+      const respuesta = mensaje.respondido
+        ? `<p class="respuesta">You answered: ${etiquetaDeRespuesta(mensaje)}</p>`
+        : '';
+      item.innerHTML = `<div class="hora"><span>${tiempoRelativo(mensaje.creado)}</span>${mensaje.leido ? '' : '<span>new</span>'}</div><p class="texto">${escapar(mensaje.texto)}</p>${respuesta}`;
+      lista.append(item);
+    }
+    marcarLeidos();
+  } catch (error) {
+    lista.innerHTML = `<li class="bandeja-vacia">${escapar(error.message || 'Could not open the scrolls.')}</li>`;
+  }
+}
+
+function etiquetaDeRespuesta(mensaje) {
+  const elegida = (mensaje.opciones || []).find((o) => o.accion === mensaje.respuesta);
+  return escapar(elegida?.etiqueta || mensaje.respuesta || '');
+}
+
+function escapar(texto) {
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// --- Instalar la app y recibir avisos ---
+let promptInstalar = null;
+const esIphone = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const estaInstalada = () =>
+  window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', (evento) => {
+  evento.preventDefault();
+  promptInstalar = evento;
+  renderTarjetaInstalar();
+});
+
+function pushDisponible() {
+  return window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function renderTarjetaInstalar() {
+  const tarjeta = $('#tarjeta-instalar');
+  if (!tarjeta) return;
+  const btnInstalar = $('#btn-instalar');
+  const btnAvisos = $('#btn-avisos');
+  const pasos = $('#instalar-pasos-ios');
+  const texto = $('#instalar-texto');
+
+  // Por una IP local sin https no se puede instalar ni avisar: no se ofrece.
+  if (!window.isSecureContext) {
+    tarjeta.classList.add('oculto');
+    return;
+  }
+
+  btnInstalar.classList.add('oculto');
+  btnAvisos.classList.add('oculto');
+  pasos.classList.add('oculto');
+
+  if (estaInstalada() || (!esIphone && pushDisponible())) {
+    // Ya está instalada (o es Android): solo falta permitir los avisos.
+    if (!pushDisponible() || Notification.permission === 'granted' || localStorage.getItem('tenka-avisos-no')) {
+      tarjeta.classList.add('oculto');
+      return;
+    }
+    texto.textContent = 'Let your rōnin reach you when a task is done or the sanctuary is attacked.';
+    btnAvisos.classList.remove('oculto');
+    tarjeta.classList.remove('oculto');
+    return;
+  }
+
+  if (localStorage.getItem('tenka-instalar-no')) {
+    tarjeta.classList.add('oculto');
+    return;
+  }
+
+  texto.textContent = 'Install Tenka on your phone and your rōnin will reach you even when the screen is locked.';
+  if (promptInstalar) btnInstalar.classList.remove('oculto');
+  else if (esIphone) pasos.classList.remove('oculto');
+  else {
+    tarjeta.classList.add('oculto');
+    return;
+  }
+  tarjeta.classList.remove('oculto');
+}
+
+function base64AUint8(cadena) {
+  const relleno = '='.repeat((4 - (cadena.length % 4)) % 4);
+  const base64 = (cadena + relleno).replace(/-/g, '+').replace(/_/g, '/');
+  const bruto = atob(base64);
+  return Uint8Array.from([...bruto].map((c) => c.charCodeAt(0)));
+}
+
+async function activarAvisos() {
+  if (!pushDisponible()) return;
+  const permiso = await Notification.requestPermission();
+  if (permiso !== 'granted') {
+    localStorage.setItem('tenka-avisos-no', '1');
+    renderTarjetaInstalar();
+    return;
+  }
+  try {
+    const registro = await navigator.serviceWorker.ready;
+    const { clave } = await api('/api/push/clave');
+    const suscripcion = await registro.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: base64AUint8(clave),
+    });
+    await api('/api/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) });
+  } catch {
+    // Sin push, la conversación en vivo y la bandeja siguen funcionando.
+  }
+  renderTarjetaInstalar();
+}
+
+document.addEventListener('click', (evento) => {
+  const objetivo = evento.target.closest('button');
+  if (!objetivo) return;
+  if (objetivo.id === 'btn-bandeja') abrirBandeja();
+  if (objetivo.id === 'btn-cerrar-bandeja') $('#bandeja').classList.add('oculto');
+  if (objetivo.id === 'btn-cerrar-instalar') {
+    localStorage.setItem(estaInstalada() ? 'tenka-avisos-no' : 'tenka-instalar-no', '1');
+    renderTarjetaInstalar();
+  }
+  if (objetivo.id === 'btn-instalar' && promptInstalar) {
+    promptInstalar.prompt();
+    promptInstalar.userChoice.finally(() => {
+      promptInstalar = null;
+      renderTarjetaInstalar();
+    });
+  }
+  if (objetivo.id === 'btn-avisos') activarAvisos();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && noLeidos > 0 && roninActual) marcarLeidos();
+});
 
 async function api(ruta, opcionesPeticion = {}) {
   const respuesta = await fetch(ruta, {
@@ -292,6 +509,16 @@ const ETIQUETA_RECURSO = {
   mon: 'mon',
 };
 
+const ETIQUETA_EDIFICIO = {
+  casa: "Rōnin's House",
+  granero: 'Granary',
+  torii: 'Torii Gate',
+  altar: 'Altar',
+  choza: "Rōnin's Shack",
+  pozo: 'Well of Mist',
+  circulo: 'Circle of Stones',
+};
+
 // Orden fijo de la tira de recursos: materiales del bando, arroz y mon.
 const ORDEN_RECURSOS = ['cedro', 'sauce', 'piedra', 'lodo', 'hierro', 'hongos', 'arroz', 'mon'];
 
@@ -324,9 +551,15 @@ function conectarSocketMovil() {
   });
 
   socket.on('mensaje:nuevo', (datos) => {
-    if (datos?.mensaje) {
-      mensajeActual = datos.mensaje;
-      renderMensajeYComandos();
+    if (!datos?.mensaje) return;
+    mensajeActual = datos.mensaje;
+    renderMensajeYComandos();
+    avisarMensajeNuevo();
+    if (document.hidden) {
+      noLeidos += 1;
+      renderContador();
+    } else {
+      marcarLeidos();
     }
   });
 }
@@ -375,7 +608,8 @@ function actualizarEstadoTarea() {
         const recurso = tarea.parametros?.recurso;
         descripcion = `Gathering ${ETIQUETA_RECURSO[recurso] || recurso || 'resources'}`;
       } else if (tarea.accion === 'construir') {
-        descripcion = `Building the ${tarea.parametros?.edificio || 'sanctuary'}`;
+        const edificio = tarea.parametros?.edificio;
+        descripcion = `Building the ${ETIQUETA_EDIFICIO[edificio] || edificio || 'sanctuary'}`;
       } else if (tarea.accion === 'descansar') {
         descripcion = 'Resting at sanctuary';
       }
@@ -474,6 +708,11 @@ function mostrarOrdenes(datos) {
   renderRecursos();
   actualizarEstadoTarea();
   renderMensajeYComandos();
+
+  noLeidos = Number(datos.noLeidos || 0);
+  renderContador();
+  renderTarjetaInstalar();
+  if (noLeidos > 0) marcarLeidos();
 
   conectarSocketMovil();
   mostrarVista('pantalla-ordenes');
