@@ -499,7 +499,24 @@ formOrdenLibre?.addEventListener('submit', async (e) => {
       method: 'POST',
       body: JSON.stringify({ texto }),
     });
-    respuestaOrdenLibre.textContent = res.respuesta || 'The rōnin heard your order.';
+    // El rōnin contesta en su pergamino; si la orden se ejecutó, el estado cambia.
+    if (res.mensaje) {
+      mensajeActual = res.mensaje;
+      renderMensajeYComandos();
+    }
+    if (res.ronin) {
+      roninActual = res.ronin;
+      actualizarEstadoTarea();
+    }
+    if (res.recursos) {
+      recursosActuales = res.recursos;
+      renderRecursos();
+    }
+    respuestaOrdenLibre.textContent = res.ejecutada
+      ? `Order understood: ${res.accion?.etiqueta || res.accion?.accion}.`
+      : res.ocupado
+        ? 'Your rōnin is busy. He will listen when the task is done.'
+        : res.mensaje?.texto || 'The rōnin heard your order.';
     respuestaOrdenLibre.classList.remove('oculto');
     entradaOrdenLibre.value = '';
   } catch (err) {

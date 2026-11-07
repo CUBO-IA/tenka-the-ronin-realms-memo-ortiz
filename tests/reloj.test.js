@@ -24,7 +24,7 @@ function prepararJuego() {
 }
 
 describe('reloj del mundo y avance de tareas', () => {
-  test('ignora tareas que aún no han terminado', () => {
+  test('ignora tareas que aún no han terminado', async () => {
     const { db, ronin } = prepararJuego();
     const ahora = 100000;
     ejecutarAccion(
@@ -34,14 +34,14 @@ describe('reloj del mundo y avance de tareas', () => {
       ahora,
     );
 
-    const completados = avanzarMundo(db, null, ahora + 1000);
+    const completados = await avanzarMundo(db, null, ahora + 1000);
     assert.equal(completados.length, 0);
 
     const roninDb = db.prepare('SELECT * FROM ronin WHERE id = ?').get(ronin.id);
     assert.equal(roninDb.estado, 'recolectando');
   });
 
-  test('completa recolección, suma recursos y genera nuevo mensaje con opciones', () => {
+  test('completa recolección, suma recursos y genera nuevo mensaje con opciones', async () => {
     const { db, ronin } = prepararJuego();
     const ahora = 100000;
     const res = ejecutarAccion(
@@ -53,7 +53,7 @@ describe('reloj del mundo y avance de tareas', () => {
     const recursosAntes = obtenerRecursos(db, ronin.id);
 
     // Avanzamos el reloj al momento en que termina la tarea
-    const completados = avanzarMundo(db, null, ahora + res.duracionMs + 1);
+    const completados = await avanzarMundo(db, null, ahora + res.duracionMs + 1);
     assert.equal(completados.length, 1);
 
     const roninDb = db.prepare('SELECT * FROM ronin WHERE id = ?').get(ronin.id);
@@ -71,7 +71,7 @@ describe('reloj del mundo y avance de tareas', () => {
     assert.ok(mensaje.opciones.length >= 2);
   });
 
-  test('completa etapa de construcción y avanza el progreso del edificio', () => {
+  test('completa etapa de construcción y avanza el progreso del edificio', async () => {
     const { db, ronin } = prepararJuego();
     const ahora = 200000;
     const res = ejecutarAccion(
@@ -81,7 +81,7 @@ describe('reloj del mundo y avance de tareas', () => {
       ahora,
     );
 
-    const completados = avanzarMundo(db, null, ahora + res.duracionMs + 1);
+    const completados = await avanzarMundo(db, null, ahora + res.duracionMs + 1);
     assert.equal(completados.length, 1);
 
     const ed = edificioPorTipo(db, ronin.id, 'casa');
@@ -94,7 +94,7 @@ describe('reloj del mundo y avance de tareas', () => {
     assert.ok(mensaje.texto.includes("Rōnin's House"));
   });
 
-  test('notifica eventos por Socket.IO al completar una tarea', () => {
+  test('notifica eventos por Socket.IO al completar una tarea', async () => {
     const { db, ronin, usuarioId } = prepararJuego();
     const ahora = 300000;
     const res = ejecutarAccion(
@@ -115,7 +115,7 @@ describe('reloj del mundo y avance de tareas', () => {
       },
     };
 
-    avanzarMundo(db, ioFalso, ahora + res.duracionMs + 1);
+    await avanzarMundo(db, ioFalso, ahora + res.duracionMs + 1);
 
     assert.ok(eventosEmitidos.length >= 2);
     const eventosNombres = eventosEmitidos.map((e) => e.evento);

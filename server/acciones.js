@@ -96,6 +96,68 @@ export function mensajeActual(db, ronin) {
   return ultimoMensaje(db, ronin.id) || crearMensajeInicial(db, ronin);
 }
 
+// Todas las acciones posibles ahora mismo, con etiqueta: lo que la IA puede
+// elegir y lo que el celular puede ofrecer.
+export function accionesValidas(db, ronin) {
+  const bando = ronin.bando;
+  const recursos = obtenerRecursos(db, ronin.id);
+  const mapaEdificios = Object.fromEntries(obtenerEdificios(db, ronin.id).map((e) => [e.tipo, e.etapa]));
+  const lista = [];
+
+  for (const [tipo, def] of Object.entries(reglas.edificiosEra1[bando] || {})) {
+    const etapaActual = mapaEdificios[tipo] || null;
+    const proxEtapa = siguienteEtapa(etapaActual);
+    if (!proxEtapa) continue;
+    const infoEtapa = def.etapas[proxEtapa];
+    const alcanza = Object.entries(infoEtapa.costo).every(
+      ([recurso, necesario]) => (recursos[recurso] || 0) >= necesario,
+    );
+    if (!alcanza) continue;
+    const verbo = etapaActual ? 'Upgrade' : 'Build';
+    const etapaTexto = proxEtapa === 'cimientos' ? 'foundation' : proxEtapa;
+    lista.push({
+      accion: 'construir',
+      parametros: { edificio: tipo },
+      etiqueta: `${verbo} ${def.etiqueta} (${etapaTexto})`,
+    });
+  }
+
+  for (const recurso of recursosRecolectables(bando)) {
+    lista.push({
+      accion: 'recolectar',
+      parametros: { recurso },
+      etiqueta: `Gather ${reglas.recoleccion[recurso].etiqueta}`,
+    });
+  }
+
+  lista.push({ accion: 'descansar', parametros: {}, etiqueta: 'Rest at the sanctuary' });
+  return lista;
+}
+
+export function guardarMensaje(db, roninId, texto, opciones, proveedor = 'predefinido') {
+  const ahora = Date.now();
+  const info = db
+    .prepare(
+      'INSERT INTO mensajes (ronin_id, texto, opciones_json, creado, respondido) VALUES (?, ?, ?, ?, 0)',
+    )
+    .run(roninId, texto, JSON.stringify(opciones), ahora);
+  return {
+    id: Number(info.lastInsertRowid),
+    texto,
+    opciones,
+    creado: ahora,
+    respondido: false,
+    respuesta: null,
+    proveedor,
+  };
+}
+
+// Mensaje sin IA para cada momento: inicio o fin de una tarea.
+export function mensajePredefinido(db, ronin, momento, tarea = null) {
+  if (momento === 'fin_tarea' && tarea) return crearMensajeFinTarea(db, ronin, tarea);
+  return crearMensajeInicial(db, ronin);
+}
+
 export function generarOpciones(db, ronin) {
   const bando = ronin.bando;
   const recursos = obtenerRecursos(db, ronin.id);

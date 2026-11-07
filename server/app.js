@@ -7,10 +7,10 @@ import QRCode from 'qrcode';
 import { catalogoPublico } from './catalogo.js';
 import { iniciarSesion } from './auth.js';
 import { crearEmparejamiento, consumirEmparejamiento } from './emparejamiento.js';
+import { interpretarOrden, mensajeDelRonin } from './agente.js';
 import { ErrorDeJuego } from './errores.js';
 import { crearRonin, roninDeUsuario } from './ronin.js';
 import {
-  crearMensajeInicial,
   ejecutarAccion,
   obtenerEdificios,
   obtenerRecursos,
@@ -302,10 +302,10 @@ export function crearApp({ db }) {
 
   app.post(
     '/api/ronin',
-    ruta((req, res) => {
+    ruta(async (req, res) => {
       const sesion = exigirSesion(req, ESTADOS.movil);
       const ronin = crearRonin(db, sesion.usuarioId, req.body);
-      const mensaje = crearMensajeInicial(db, ronin);
+      const mensaje = await mensajeDelRonin(db, ronin, 'inicio');
       const recursos = obtenerRecursos(db, ronin.id);
       const edificios = obtenerEdificios(db, ronin.id);
 
@@ -346,22 +346,36 @@ export function crearApp({ db }) {
     }),
   );
 
-  // Orden libre por texto (queda lista para el hito 3)
+  // Orden libre por texto: la IA la convierte en una acción válida y, si el
+  // rōnin está libre, la ejecuta. El texto del maestro entra al prompt como dato.
   app.post(
     '/api/orden-texto',
-    ruta((req, res) => {
+    ruta(async (req, res) => {
       const sesion = exigirSesion(req, ESTADOS.movil);
       const ronin = roninDeUsuario(db, sesion.usuarioId);
       if (!ronin) {
         throw new ErrorDeJuego('Awaken your rōnin first.', 404, 'RONIN_NO_ENCONTRADO');
       }
 
-      res.json({
-        ok: true,
-        interpretada: false,
-        respuesta:
-          'Your rōnin hears your voice. Direct AI conversation will awaken in Era 2. Choose an order from the scrolls above for now.',
-      });
+      const texto = typeof req.body?.texto === 'string' ? req.body.texto.trim() : '';
+      if (texto.length < 2) {
+        throw new ErrorDeJuego('Say something to your rōnin.', 400, 'ORDEN_VACIA');
+      }
+
+      const resultado = await interpretarOrden(db, ronin, texto.slice(0, 300));
+
+      if (resultado.ronin) {
+        emitirAUsuario(app, sesion.usuarioId, 'ronin:actualizado', { ronin: resultado.ronin });
+        emitirAUsuario(app, sesion.usuarioId, 'recursos:actualizados', {
+          recursos: resultado.recursos,
+        });
+        emitirAUsuario(app, sesion.usuarioId, 'edificios:actualizados', {
+          edificios: resultado.edificios,
+        });
+      }
+      emitirAUsuario(app, sesion.usuarioId, 'mensaje:nuevo', { mensaje: resultado.mensaje });
+
+      res.json(resultado);
     }),
   );
 

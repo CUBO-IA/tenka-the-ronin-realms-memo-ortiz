@@ -1,13 +1,9 @@
-import {
-  crearMensajeFinTarea,
-  edificioPorTipo,
-  obtenerEdificios,
-  obtenerRecursos,
-} from './acciones.js';
-import { reglas, siguienteEtapa } from './reglas.js';
+import { edificioPorTipo, obtenerRecursos } from './acciones.js';
+import { mensajeDelRonin } from './agente.js';
+import { reglas } from './reglas.js';
 import { serializarRonin } from './ronin.js';
 
-export function avanzarMundo(db, io = null, ahora = Date.now()) {
+export async function avanzarMundo(db, io = null, ahora = Date.now()) {
   const pendientes = db
     .prepare('SELECT * FROM ronin WHERE tarea IS NOT NULL AND tarea_fin <= ?')
     .all(ahora);
@@ -66,7 +62,8 @@ export function avanzarMundo(db, io = null, ahora = Date.now()) {
     const roninFila = db.prepare('SELECT * FROM ronin WHERE id = ?').get(ronin.id);
     const roninActualizado = serializarRonin(roninFila);
     const recursosActualizados = obtenerRecursos(db, ronin.id);
-    const nuevoMensaje = crearMensajeFinTarea(db, roninActualizado, tarea);
+    // El rōnin le habla al maestro: con IA si responde, predefinido si no.
+    const nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'fin_tarea', tarea);
 
     const resultado = {
       ronin: roninActualizado,
@@ -97,11 +94,16 @@ export function avanzarMundo(db, io = null, ahora = Date.now()) {
 }
 
 export function iniciarReloj(db, io, intervaloMs = 1000) {
-  const temporizador = setInterval(() => {
+  let avanzando = false;
+  const temporizador = setInterval(async () => {
+    if (avanzando) return; // una llamada a la IA puede tardar más que un tic
+    avanzando = true;
     try {
-      avanzarMundo(db, io);
+      await avanzarMundo(db, io);
     } catch (error) {
       console.error('[reloj] Error al avanzar el mundo:', error);
+    } finally {
+      avanzando = false;
     }
   }, intervaloMs);
 

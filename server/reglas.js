@@ -37,6 +37,15 @@ export const reglas = {
   descanso: {
     duracionMs: 4000,
   },
+  ia: {
+    timeoutMs: 6000,
+    maxPorMinuto: 30, // llamadas totales a la IA por minuto, entre todos los rōnin
+    minIntervaloMs: 3000, // mínimo entre dos llamadas del mismo rōnin
+    maxCaracteresMensaje: 240,
+    maxCaracteresOrden: 200,
+    groqModelo: 'llama-3.3-70b-versatile',
+    geminiModelo: 'gemini-3.5-flash-lite',
+  },
   etapas: ['cimientos', 'construccion', 'terminado'],
   edificiosEra1: {
     luz: {
