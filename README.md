@@ -94,10 +94,7 @@ Para el detalle del juego (eras, edificios, tropas, acciones del rōnin), ver [`
 
 ## Cómo se construyó
 
-La idea, el diseño del juego, el arte y la música son de Memo Ortiz. El código se escribió con asistentes de IA:
-
-- **Gratis:** OpenCode Zen, Gemini CLI y Antigravity, hasta agotar su cupo gratuito.
-- **De pago:** Claude Code, con el que se hizo la mayor parte.
+La idea, el diseño del juego, el arte y la música son de Memo Ortiz. El código se escribió con asistentes de IA, entre ellos OpenCode Zen, Gemini CLI y Antigravity.
 
 ## Pendiente
 
