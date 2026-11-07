@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   edificiosDisponibles,
+  eraDeEdificio,
   etapaInfoEdificio,
   infoEdificio,
   recursosDeBando,
@@ -100,13 +101,30 @@ export function mensajeActual(db, ronin) {
 
 // Todas las acciones posibles ahora mismo, con etiqueta: lo que la IA puede
 // elegir y lo que el celular puede ofrecer.
+// ¿Ya marchó alguna vez? En la era 2, la aldea se gana peleando primero.
+export function haAtacado(db, roninId) {
+  return db.prepare('SELECT COUNT(*) AS n FROM batallas WHERE atacante = ?').get(roninId).n > 0;
+}
+
+export function aldeaBloqueada(db, ronin) {
+  return Boolean(reglas.conflicto.primerAtaqueAntesDeConstruir) && ronin.era >= 2 && !haAtacado(db, ronin.id);
+}
+
+// Las acciones de conflicto las aporta ordenes.js al cargar (evita el ciclo de imports).
+let accionesExtra = null;
+export function registrarAccionesExtra(fn) {
+  accionesExtra = fn;
+}
+
 export function accionesValidas(db, ronin) {
   const bando = ronin.bando;
   const recursos = obtenerRecursos(db, ronin.id);
   const mapaEdificios = Object.fromEntries(obtenerEdificios(db, ronin.id).map((e) => [e.tipo, e.etapa]));
   const lista = [];
+  const bloqueada = aldeaBloqueada(db, ronin);
 
   for (const [tipo, def] of Object.entries(edificiosDisponibles(bando, ronin.era))) {
+    if (bloqueada && eraDeEdificio(bando, tipo) >= 2) continue;
     const etapaActual = mapaEdificios[tipo] || null;
     const proxEtapa = siguienteEtapa(etapaActual);
     if (!proxEtapa) continue;
@@ -194,8 +212,8 @@ export function mensajePredefinido(db, ronin, momento, tarea = null) {
       ronin.era >= 3
         ? `Master, the village is whole: Era 2 is complete. Here our story pauses. Era 3 will bring the market, the pacts between clans and the fortress; until then, I will guard what we built. — ${inicial}.`
         : ronin.bando === 'sombra'
-          ? `Master, the dark flame burns and the mist lifts: Era 2. The island can see us now, and we can see them. From here, wealth is taken: raid another sanctuary and we keep part of what they hold. I can train oni and kitsune, raise the grove, the cauldron, the thorn wall and the lantern, or offer a red thread of alliance to another clan. Choose our first move. — ${inicial}.`
-          : `Master, the altar flame is lit and the fog lifts: Era 2. The island can see us now, and we can see them. From here, wealth is earned by the blade: raid another sanctuary and we keep part of what they hold. I can train samurai and archers, raise the terraces, the forge, the palisade and the watchtower, or offer a red thread of alliance to another clan. Choose our first move. — ${inicial}.`;
+          ? `Master, the dark flame burns and the mist lifts: Era 2. The island can see us now, and we can see them. Here the village is earned with the blade: before we raise the grove or the cauldron, we must raid another sanctuary and take part of what they hold. Train oni and kitsune if you wish, then choose whom we strike. — ${inicial}.`
+          : `Master, the altar flame is lit and the fog lifts: Era 2. The island can see us now, and we can see them. Here the village is earned with the blade: before we raise the terraces or the forge, we must raid another sanctuary and take part of what they hold. Train samurai and archers if you wish, then choose whom we strike. — ${inicial}.`;
     return guardarMensaje(db, ronin.id, texto, generarOpciones(db, ronin));
   }
   return crearMensajeInicial(db, ronin);
@@ -243,7 +261,21 @@ export function generarOpciones(db, ronin) {
   const mapaEdificios = Object.fromEntries(edificiosActuales.map((e) => [e.tipo, e.etapa]));
 
   const opciones = [];
-  const catalogoEdificios = edificiosDisponibles(bando, ronin.era);
+  const bloqueada = aldeaBloqueada(db, ronin);
+
+  // En la era 2, primero la espada: ataques y tropas adelante.
+  if (ronin.era >= 2 && accionesExtra) {
+    const extra = accionesExtra(db, ronin).filter((a) => ['atacar', 'entrenar'].includes(a.accion));
+    extra.sort((a, b) => (a.accion === 'atacar' ? -1 : 1) - (b.accion === 'atacar' ? -1 : 1));
+    for (const accion of extra) {
+      if (opciones.length >= (bloqueada ? 2 : 1)) break;
+      opciones.push(accion);
+    }
+  }
+
+  const catalogoEdificios = Object.fromEntries(
+    Object.entries(edificiosDisponibles(bando, ronin.era)).filter(([tipo]) => !(bloqueada && eraDeEdificio(bando, tipo) >= 2)),
+  );
 
   // 1. Opciones de construcción viables
   for (const [tipo, def] of Object.entries(catalogoEdificios)) {
@@ -474,6 +506,14 @@ export function ejecutarAccion(db, roninId, cuerpo, ahora = Date.now()) {
           : `That building is not available for the ${bando} path.`,
         400,
         'EDIFICIO_INVALIDO',
+      );
+    }
+
+    if (eraDeEdificio(bando, tipo) >= 2 && aldeaBloqueada(db, ronin)) {
+      throw new ErrorDeJuego(
+        'The village is earned with the blade: raid another sanctuary first.',
+        400,
+        'PRIMERO_PELEAR',
       );
     }
 

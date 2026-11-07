@@ -148,6 +148,26 @@ describe('conflicto: alianzas, tropas y ataques', () => {
     assert.equal(historial[0].ganamos, false);
   });
 
+  test('en la era 2 la aldea se bloquea hasta la primera batalla', async () => {
+    const { db, hana, ryo, fila, subirEra } = mundoDePrueba();
+    subirEra(hana.id, 2);
+    subirEra(ryo.id, 2);
+    db.prepare('UPDATE recursos SET cantidad = 500 WHERE ronin_id = ?').run(hana.id);
+
+    const antes = accionesValidas(db, fila(hana.id));
+    assert.ok(!antes.some((a) => a.accion === 'construir' && a.parametros.edificio === 'terrazas'));
+    assert.ok(antes.some((a) => a.accion === 'atacar'));
+    assert.throws(
+      () => ejecutarOrden(db, hana.id, { accion: 'construir', parametros: { edificio: 'terrazas' } }, 1000),
+      /raid another sanctuary first/,
+    );
+
+    const marcha = ejecutarOrden(db, hana.id, { accion: 'atacar', parametros: { clan: ryo.id } }, 2000);
+    await avanzarMundo(db, null, 2000 + marcha.duracionMs + 1);
+    const despues = accionesValidas(db, fila(hana.id));
+    assert.ok(despues.some((a) => a.accion === 'construir' && a.parametros.edificio === 'terrazas'));
+  });
+
   test('la defensa suma parte de la de los aliados', () => {
     const { db, hana, ryo, fila } = mundoDePrueba();
     const sola = fuerzaDefensa(db, fila(ryo.id));

@@ -2,7 +2,13 @@
 // la lista cerrada y la manda a quien la ejecuta (era 1 o conflicto).
 
 import { z } from 'zod';
-import { accionesValidas as accionesEra1, ejecutarAccion, guardarLineaDelMaestro, mensajeDeSalida } from './acciones.js';
+import {
+  accionesValidas as accionesEra1,
+  ejecutarAccion,
+  guardarLineaDelMaestro,
+  mensajeDeSalida,
+  registrarAccionesExtra,
+} from './acciones.js';
 import {
   iniciarAtaque,
   iniciarEntrenamiento,
@@ -56,6 +62,11 @@ export function accionesValidas(db, ronin, ahora = Date.now()) {
     ...opcionesDeAtaque(db, ronin, ahora),
   ];
 }
+
+registrarAccionesExtra((db, ronin) => [
+  ...opcionesDeEntrenar(db, ronin),
+  ...opcionesDeAtaque(db, ronin),
+]);
 
 function estadoDe(db, roninId) {
   const fila = db.prepare('SELECT * FROM ronin WHERE id = ?').get(roninId);

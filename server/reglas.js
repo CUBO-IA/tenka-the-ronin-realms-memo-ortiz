@@ -146,6 +146,8 @@ export const reglas = {
   // partida corta. Los ataques van desde la era 2, como dice el diseño.
   conflicto: {
     desdeEra: 2,
+    // La era 2 empieza con la espada: hasta la primera batalla no se construye la aldea.
+    primerAtaqueAntesDeConstruir: true,
     marchaMs: 8000, // lo que tarda el ataque en llegar
     entrenarMs: 5000,
     azar: 0.25, // ±25 % en cada fuerza
