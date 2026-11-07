@@ -10,6 +10,7 @@ quedan normalizados y con una máscara (rojo = kimono, azul = hakama) para que
 el celular pueda recolorearlos en vivo. La faja no se recolorea.
 
     python3 scripts/recortar-arte.py --solo-mascaras
+    python3 scripts/recortar-arte.py --solo-edificios
 
 rehace solo las máscaras a partir de los sprites ya normalizados de
 public/assets/, para ajustar zonas sin volver a recortar todo.
@@ -686,6 +687,42 @@ EDIFICIOS_ERA1 = [
 ]
 
 
+
+def _quitar_rotulos(pieza: Image.Image, minimo: int = 500) -> Image.Image:
+    """Borra los rótulos de la hoja ("Foundation", "ALTAR"…) que quedan
+    pegados al recorte: son manchas chicas y sueltas, separadas del edificio.
+    Se conservan solo las partes conectadas con al menos `minimo` píxeles."""
+    datos = np.array(pieza.convert("RGBA"))
+    visible = datos[:, :, 3] > 0
+    alto, ancho = visible.shape
+    etiquetas = np.zeros((alto, ancho), dtype=np.int32)
+    tamanos: list[int] = [0]
+    actual = 0
+    for y0 in range(alto):
+        for x0 in range(ancho):
+            if not visible[y0, x0] or etiquetas[y0, x0]:
+                continue
+            actual += 1
+            cola = deque([(y0, x0)])
+            etiquetas[y0, x0] = actual
+            cuenta = 0
+            while cola:
+                y, x = cola.popleft()
+                cuenta += 1
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+                    ny, nx = y + dy, x + dx
+                    if 0 <= ny < alto and 0 <= nx < ancho and visible[ny, nx] and not etiquetas[ny, nx]:
+                        etiquetas[ny, nx] = actual
+                        cola.append((ny, nx))
+            tamanos.append(cuenta)
+    # Umbral relativo: las letras grandes de los títulos también son chicas
+    # comparadas con el edificio.
+    umbral = max(minimo, int(max(tamanos) * 0.04))
+    chicas = np.array([t < umbral for t in tamanos])
+    datos[chicas[etiquetas] & visible] = (0, 0, 0, 0)
+    return _recortar_contenido(Image.fromarray(datos, "RGBA"), margen=1)
+
+
 def extraer_edificios() -> None:
     print("Edificios de la Era 1")
     hojas_abiertas: dict[str, Image.Image] = {}
@@ -710,6 +747,7 @@ def extraer_edificios() -> None:
         )
         fondo = _limpiar_halo(rgb, fondo, pasadas=3, saturacion_max=28, brillo_min=125, brillo_max=244)
         pieza = _recortar_contenido(_rgba(recorte, fondo), margen=1)
+        pieza = _quitar_rotulos(pieza)
 
         # Ajuste de escala a tamaño óptimo en pantalla (máx 440px de ancho o 340px de alto)
         escala = min(1.0, 440 / max(1, pieza.width), 340 / max(1, pieza.height))
@@ -799,6 +837,9 @@ def extraer_animaciones() -> None:
 def main() -> None:
     if "--solo-mascaras" in sys.argv:
         solo_mascaras()
+        return
+    if "--solo-edificios" in sys.argv:
+        extraer_edificios()
         return
 
     print(f"Origen: {ARTE}")
