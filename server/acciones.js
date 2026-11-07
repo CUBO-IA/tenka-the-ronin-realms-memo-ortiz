@@ -194,8 +194,8 @@ export function mensajePredefinido(db, ronin, momento, tarea = null) {
       ronin.era >= 3
         ? `Master, the village is whole. Era ${ronin.era} begins: our sanctuary is a fortress now, and the island will remember our name. — ${inicial}.`
         : ronin.bando === 'sombra'
-          ? `Master, the dark flame burns. The mist lifts from our land: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`
-          : `Master, the altar flame is lit. The fog lifts from our sanctuary: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`;
+          ? `Master, the dark flame burns and the mist lifts: Era 2. The island can see us now, and we can see them. From here, wealth is taken: raid another sanctuary and we keep part of what they hold. I can train oni and kitsune, raise the grove, the cauldron, the thorn wall and the lantern, or offer a red thread of alliance to another clan. Choose our first move. — ${inicial}.`
+          : `Master, the altar flame is lit and the fog lifts: Era 2. The island can see us now, and we can see them. From here, wealth is earned by the blade: raid another sanctuary and we keep part of what they hold. I can train samurai and archers, raise the terraces, the forge, the palisade and the watchtower, or offer a red thread of alliance to another clan. Choose our first move. — ${inicial}.`;
     return guardarMensaje(db, ronin.id, texto, generarOpciones(db, ronin));
   }
   return crearMensajeInicial(db, ronin);
@@ -303,8 +303,8 @@ export function crearMensajeInicial(db, ronin) {
   const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
   const texto =
     ronin.bando === 'sombra'
-      ? `Master, I have stepped into the mist. Shadows gather around us. What is your command? — ${inicial}.`
-      : `Master, I have arrived at the sanctuary. The path is clear. What shall I do first? — ${inicial}.`;
+      ? `Master, I have stepped into the mist. This marsh is ours to shape: four works to raise (the shack, the well, the circle of stones and the dark altar), and while the mist holds, no one can see or strike us. Tap what I suggest, or speak to me in your own words; I will keep working while you are away. What is your command? — ${inicial}.`
+      : `Master, I have arrived at the sanctuary. This snow is ours to build on: four works to raise (the house, the granary, the torii and the altar), and while the fog holds, no one can see or strike us. Tap what I suggest, or speak to me in your own words; I will keep working while you are away. What shall I do first? — ${inicial}.`;
 
   const opciones = generarOpciones(db, ronin);
   const ahora = Date.now();
