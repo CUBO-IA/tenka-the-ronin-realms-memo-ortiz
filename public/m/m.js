@@ -74,6 +74,57 @@ function avisarMensajeNuevo() {
 
 window.addEventListener('pointerdown', prepararAudio, { once: true });
 
+function mostrarTarjetaBatalla(resultado, soyAtacante) {
+  const gane = (resultado.ganador === 'atacante') === soyAtacante;
+  const otro = soyAtacante ? resultado.defensor : resultado.atacante;
+  const tarjeta = $('#tarjeta-batalla');
+  tarjeta.classList.toggle('derrota', !gane);
+  $('#batalla-antetitulo').textContent = soyAtacante ? `Your raid on ${otro.nombre}` : `${otro.nombre} raided your sanctuary`;
+  $('#batalla-titulo').textContent = gane ? 'Victory' : 'Defeat';
+  $('#batalla-detalle').textContent = gane
+    ? soyAtacante
+      ? `${roninActual.nombre} broke the gate.`
+      : `${roninActual.nombre} held the gate.`
+    : soyAtacante
+      ? `${otro.nombre}'s walls held. ${roninActual.nombre} retreats.`
+      : `${otro.nombre} broke through.`;
+  $('#batalla-marcador').textContent = `Attack ${Math.round(resultado.ataque)} · Defense ${Math.round(resultado.defensa)}`;
+
+  const botin = $('#batalla-botin');
+  botin.innerHTML = '';
+  const entradas = Object.entries(resultado.botin || {});
+  const ganoBotin = resultado.ganador === 'atacante';
+  for (const [tipo, cantidad] of entradas) {
+    const chip = document.createElement('span');
+    chip.className = 'recurso-chip';
+    const signo = ganoBotin === soyAtacante ? '+' : '−';
+    chip.innerHTML = `<img src="/assets/icono-${iconoDeRecurso(tipo)}.png" alt="" /><span>${signo}${cantidad}</span>`;
+    botin.append(chip);
+  }
+
+  const extras = [];
+  if (resultado.edificioDanado) {
+    extras.push(
+      soyAtacante
+        ? `Their ${ETIQUETA_EDIFICIO[resultado.edificioDanado.tipo] || resultado.edificioDanado.tipo} fell a stage.`
+        : `Our ${ETIQUETA_EDIFICIO[resultado.edificioDanado.tipo] || resultado.edificioDanado.tipo} fell a stage.`,
+    );
+  }
+  const perdidas = Object.entries(resultado.tropasPerdidas || {});
+  if (perdidas.length && soyAtacante) {
+    extras.push(`Troops lost: ${perdidas.map(([t, n]) => `${n} ${t}`).join(', ')}.`);
+  }
+  if (!entradas.length && !extras.length) extras.push(gane ? 'No loot this time, only honor.' : 'Nothing was taken.');
+  if (soyDefensorConEscudo(resultado, soyAtacante)) extras.push('A shield protects the sanctuary for a while.');
+  $('#batalla-extra').textContent = extras.join(' ');
+  tarjeta.classList.remove('oculto');
+  avisarMensajeNuevo();
+}
+
+function soyDefensorConEscudo(resultado, soyAtacante) {
+  return !soyAtacante && resultado.escudoHasta && resultado.escudoHasta > Date.now();
+}
+
 function renderContador() {
   const contador = $('#bandeja-contador');
   if (!contador) return;
@@ -234,6 +285,7 @@ document.addEventListener('click', (evento) => {
   if (!objetivo) return;
   if (objetivo.id === 'btn-bandeja') abrirBandeja();
   if (objetivo.id === 'btn-cerrar-bandeja') $('#bandeja').classList.add('oculto');
+  if (objetivo.id === 'btn-cerrar-batalla') $('#tarjeta-batalla').classList.add('oculto');
   if (objetivo.id === 'btn-cerrar-instalar') {
     localStorage.setItem(estaInstalada() ? 'tenka-avisos-no' : 'tenka-instalar-no', '1');
     renderTarjetaInstalar();
@@ -556,6 +608,15 @@ function conectarSocketMovil() {
       recursosActuales = datos.recursos;
       renderRecursos();
     }
+  });
+
+  // Mi rōnin peleó: la tarjeta de victoria o derrota, antes del parte en el chat.
+  socket.on('batalla:resultado', (resultado) => {
+    if (!roninActual || !resultado?.atacante || !resultado?.defensor) return;
+    const soyAtacante = resultado.atacante.id === roninActual.id;
+    const soyDefensor = resultado.defensor.id === roninActual.id;
+    if (!soyAtacante && !soyDefensor) return;
+    mostrarTarjetaBatalla(resultado, soyAtacante);
   });
 
   socket.on('mensaje:nuevo', (datos) => {

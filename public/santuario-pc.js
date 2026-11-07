@@ -178,6 +178,8 @@ export function batallaInicio(batalla) {
   escenaMapa()?.actualizarRonin({ ...batalla.atacante, estado: 'atacando' });
 }
 
+// El resultado se ve en la escena (pública); el parte y la tarjeta de
+// victoria o derrota los da el rōnin en el celular de cada maestro.
 export function batallaResultado(resultado) {
   const activa = escena();
   if (activa && activa.ronin?.id === resultado?.defensor?.id) {
