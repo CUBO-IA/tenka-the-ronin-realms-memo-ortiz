@@ -586,6 +586,31 @@ export class EscenaSantuario extends Phaser.Scene {
     this.atacanteSprite.play(`atacante_${variacion}_walk`);
     this.variacionAtacante = variacion;
 
+    // Las tropas del atacante entran en columna detrás de él.
+    this.tropasAtacante = [];
+    const tiposAtacante = atacante.bando === 'luz' ? ['samurai', 'arquero'] : ['oni', 'kitsune'];
+    let puesto = 0;
+    for (const tipo of tiposAtacante) {
+      const cantidad = Math.min(4, atacante.tropas?.[tipo] || 0);
+      for (let i = 0; i < cantidad && puesto < 6; i += 1) {
+        const sprite = this.add.sprite(-260 - puesto * 60, this.suelo - 4 + (puesto % 2) * 8, `tropa_${tipo}_0`);
+        sprite.setOrigin(0.5, 1);
+        sprite.setScale(0.85);
+        sprite.setDepth(10);
+        this.cargarYAnimarTropa(sprite, tipo);
+        this.tropasAtacante.push(sprite);
+        this.tweens.add({ targets: sprite, x: 700 - puesto * 60, duration: 1800 + puesto * 120, ease: 'Linear', onComplete: () => sprite.active && sprite.anims.stop() });
+        puesto += 1;
+      }
+    }
+
+    // Las tropas del defensor se forman delante de su rōnin.
+    this.tropasSprites.forEach((sprite, i) => {
+      this.tweens.killTweensOf(sprite);
+      sprite.setFlipX(true);
+      this.tweens.add({ targets: sprite, x: 1120 + i * 48, y: this.suelo - 4 + (i % 2) * 8, duration: 900, onComplete: () => sprite.active && sprite.anims.stop() });
+    });
+
     const cartel = this.add.text(960, 120, `${atacante.nombre} attacks the sanctuary!`, {
       fontFamily: '"Iowan Old Style", Palatino, Georgia, serif',
       fontSize: '40px',
@@ -612,11 +637,32 @@ export class EscenaSantuario extends Phaser.Scene {
       ease: 'Linear',
       onComplete: () => {
         if (!this.atacanteSprite) return;
-        this.atacanteSprite.play(`atacante_${variacion}_chop`);
-        this.roninSprite.play(`${this.prefijo}chop`);
+        // En guardia: los golpes se ven uno por uno, no como un trabajo.
+        this.atacanteSprite.anims.stop();
+        this.atacanteSprite.setTexture(clave('idle-0'));
+        this.roninSprite.play(`${this.prefijo}idle`);
         this.cameras.main.shake(400, 0.004);
       },
     });
+  }
+
+  // Un sprite de tropa de otro bando puede no tener sus cuadros cargados todavía.
+  cargarYAnimarTropa(sprite, tipo) {
+    const animacion = `tropa_${tipo}`;
+    const listo = () => {
+      if (!sprite.active) return;
+      if (!this.anims.exists(animacion)) {
+        this.anims.create({ key: animacion, frames: [0, 1, 2, 3].map((i) => ({ key: `tropa_${tipo}_${i}` })), frameRate: 6, repeat: -1 });
+      }
+      sprite.play(animacion);
+    };
+    if (this.textures.exists(`tropa_${tipo}_0`)) {
+      listo();
+      return;
+    }
+    for (let i = 0; i < 4; i += 1) this.load.image(`tropa_${tipo}_${i}`, `/assets/tropa-${tipo}-caminar-${i}.png`);
+    this.load.once('complete', listo);
+    this.load.start();
   }
 
   // El combate golpe a golpe que decidió el servidor: barras de vida sobre los
@@ -665,19 +711,31 @@ export class EscenaSantuario extends Phaser.Scene {
     if (!this.roninSprite) return;
     this.vidaA = golpe.vidaA;
     this.vidaD = golpe.vidaD;
-    const golpeado = golpe.quien === 'atacante' ? this.roninSprite : this.atacanteSprite;
-    const golpeador = golpe.quien === 'atacante' ? this.atacanteSprite : this.roninSprite;
-    if (golpeado) {
-      golpeado.setTint(0xffffff);
-      if (golpeado.setTintMode && Phaser.TintModes) golpeado.setTintMode(Phaser.TintModes.FILL);
-      this.time.delayedCall(90, () => {
-        if (!golpeado.active) return;
-        golpeado.clearTint();
-        if (golpeado.setTintMode && Phaser.TintModes) golpeado.setTintMode(Phaser.TintModes.NORMAL);
-      });
-      this.tweens.add({ targets: golpeado, x: golpeado.x + (golpe.quien === 'atacante' ? 14 : -14), duration: 80, yoyo: true });
+    const pegaAtacante = golpe.quien === 'atacante';
+    const golpeadores = pegaAtacante
+      ? [this.atacanteSprite, ...(this.tropasAtacante || [])]
+      : [this.roninSprite, ...this.tropasSprites];
+    const golpeados = pegaAtacante
+      ? [this.roninSprite, ...this.tropasSprites]
+      : [this.atacanteSprite, ...(this.tropasAtacante || [])];
+    const sentido = pegaAtacante ? 1 : -1;
+
+    for (const sprite of golpeadores) {
+      if (!sprite?.active) continue;
+      // Embestida corta hacia el enemigo y vuelta.
+      this.tweens.add({ targets: sprite, x: sprite.x + 34 * sentido, duration: 110, yoyo: true, ease: 'Quad.easeOut' });
     }
-    if (golpeador) this.tweens.add({ targets: golpeador, scaleX: golpeador.scaleX * 1.08, scaleY: golpeador.scaleY * 1.08, duration: 90, yoyo: true });
+    for (const sprite of golpeados) {
+      if (!sprite?.active) continue;
+      sprite.setTint(0xffffff);
+      if (sprite.setTintMode && Phaser.TintModes) sprite.setTintMode(Phaser.TintModes.FILL);
+      this.tweens.add({ targets: sprite, x: sprite.x + 12 * sentido, duration: 80, yoyo: true, delay: 100 });
+      this.time.delayedCall(190, () => {
+        if (!sprite.active) return;
+        sprite.clearTint();
+        if (sprite.setTintMode && Phaser.TintModes) sprite.setTintMode(Phaser.TintModes.NORMAL);
+      });
+    }
     this.cameras.main.shake(120, 0.0025);
     this.dibujarBarras();
   }
@@ -693,12 +751,15 @@ export class EscenaSantuario extends Phaser.Scene {
   resolverAtaque(resultado) {
     if (!this.roninSprite) return;
     const ganaAtacante = resultado?.ganador === 'atacante';
-    const perdedor = ganaAtacante ? this.roninSprite : this.atacanteSprite;
+    const perdedores = ganaAtacante
+      ? [this.roninSprite, ...this.tropasSprites]
+      : [this.atacanteSprite, ...(this.tropasAtacante || [])];
     const ganador = ganaAtacante ? this.atacanteSprite : this.roninSprite;
 
     this.cameras.main.flash(300, 255, 240, 220);
     if (ganador?.anims) ganador.play(ganador === this.roninSprite ? `${this.prefijo}idle` : `atacante_${this.variacionAtacante}_walk`);
-    if (perdedor) {
+    for (const perdedor of perdedores) {
+      if (!perdedor?.active) continue;
       perdedor.setTint(0x663333);
       this.tweens.add({ targets: perdedor, alpha: 0.25, angle: ganaAtacante ? -80 : 80, duration: 700 });
     }
@@ -720,6 +781,10 @@ export class EscenaSantuario extends Phaser.Scene {
 
   terminarAtaque() {
     this.quitarBarras();
+    for (const sprite of this.tropasAtacante || []) sprite.destroy();
+    this.tropasAtacante = [];
+    // Las tropas del defensor vuelven a su puesto, enteras.
+    this.actualizarTropas(this.tropas);
     if (this.atacanteSprite) {
       this.atacanteSprite.destroy();
       this.atacanteSprite = null;
