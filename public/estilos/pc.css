@@ -158,9 +158,10 @@
 
 .panel-inicio {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: clamp(0.9rem, 2vh, 2rem);
-  transform: translateX(-50%);
+  margin-inline: auto;
   width: min(330px, 90vw);
   --marco-madera: 22px;
   padding: 0.8rem clamp(0.8rem, 2vw, 1.1rem) 0.65rem;
@@ -656,7 +657,7 @@
     left: auto;
     right: clamp(1.5rem, 6vw, 6rem);
     bottom: 1rem;
-    transform: none;
+    margin-inline: 0;
   }
 
   .creditos {
