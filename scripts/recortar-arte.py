@@ -958,7 +958,7 @@ ALDEANOS_FIJOS = [
 TROPAS = [
     ("sprites-tropas-era3.png", (300, 85, 2752, 410), "samurai"),
     ("sprites-tropas-era3.png", (300, 420, 2752, 770), "arquero"),
-    ("sprites-tropas-era3.png", (300, 820, 2752, 1190), "oni"),
+    ("sprites-tropas-era3.png", (300, 880, 2752, 1190), "oni"),  # desde 880: fuera el rótulo "Yōkai"
     ("sprites-tropas-era3.png", (300, 1195, 2752, 1530), "kitsune"),
 ]
 # Los samuráis se tocan entre sí en la hoja: sus pasos van con cajas fijas.
