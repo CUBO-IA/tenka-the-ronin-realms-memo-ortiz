@@ -27,6 +27,7 @@ export class EscenaSantuario extends Phaser.Scene {
     this.sombraSprite = null;
     // Línea del suelo donde se apoyan rōnin y edificios (el fondo es 1920x1080).
     this.suelo = this.bando === 'luz' ? 985 : 990;
+    this.sueloRonin = this.suelo + 28;
     this.destinoX = 960;
     this.destinoY = this.suelo;
 
@@ -71,7 +72,7 @@ export class EscenaSantuario extends Phaser.Scene {
       farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
     };
     // El patio de armas: filas de a 5 a la derecha del claro, frente al torii.
-    this.patio = { x: 1440, y, paso: 52, porFila: 5, filaAlto: 22 };
+    this.patio = { x: 1440, y: y - 70, paso: 52, porFila: 5, filaAlto: 22 };
     this.escalaRonin = 0.72;
     this.escalaAldeano = 0.62;
     this.escalaTropa = 0.6;
@@ -502,12 +503,12 @@ export class EscenaSantuario extends Phaser.Scene {
     ctx.fillRect(0, 0, 120, 36);
     if (!this.textures.exists('sombra_suelo')) this.textures.addCanvas('sombra_suelo', lienzoSombra);
 
-    this.sombraSprite = this.add.image(960, this.suelo + 2, 'sombra_suelo');
+    this.sombraSprite = this.add.image(960, this.sueloRonin + 2, 'sombra_suelo');
     this.sombraSprite.setOrigin(0.5, 0.5);
     this.sombraSprite.setDepth(9);
 
     // Sprite animado del rōnin
-    this.roninSprite = this.add.sprite(960, this.suelo, `${this.prefijo}idle_0`);
+    this.roninSprite = this.add.sprite(960, this.sueloRonin, `${this.prefijo}idle_0`);
     this.roninSprite.setOrigin(0.5, 1);
     this.roninSprite.setScale(this.escalaRonin);
     this.roninSprite.setDepth(10);
@@ -528,7 +529,7 @@ export class EscenaSantuario extends Phaser.Scene {
       // Camina al área de recolección (bosque o cantera en el costado)
       // Recolecta en el claro del centro, entre los edificios.
       const targetX = 1030;
-      const targetY = this.suelo;
+      const targetY = this.sueloRonin;
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(false);
         this.roninSprite.play(`${this.prefijo}chop`);
@@ -540,7 +541,7 @@ export class EscenaSantuario extends Phaser.Scene {
       // Se para a la derecha del edificio, mirando hacia él.
       const ancho = posEdificio ? 150 * (posEdificio.escala || 1) : 150;
       const targetX = posEdificio ? Phaser.Math.Clamp(posEdificio.x + ancho, 120, 1800) : 1030;
-      const targetY = this.suelo;
+      const targetY = this.sueloRonin;
 
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(true);
@@ -548,20 +549,20 @@ export class EscenaSantuario extends Phaser.Scene {
       });
     } else if (estado === 'entrenando') {
       // Entrena en el claro: golpes al aire frente al santuario.
-      this.moverRonin(1180, this.suelo, () => {
+      this.moverRonin(1180, this.sueloRonin, () => {
         this.roninSprite.setFlipX(true);
         this.roninSprite.play(`${this.prefijo}chop`);
       });
     } else if (estado === 'atacando') {
       // Marcha: sale por la derecha del santuario hacia la isla.
       this.ocultarGlobo();
-      this.moverRonin(2050, this.suelo, () => {
+      this.moverRonin(2050, this.sueloRonin, () => {
         this.roninSprite.play(`${this.prefijo}idle`);
       });
     } else if (estado === 'descansando') {
       // Regresa a descansar junto a la casa / refugio
       const targetX = 560;
-      const targetY = this.suelo;
+      const targetY = this.sueloRonin;
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(false);
         this.roninSprite.play(`${this.prefijo}idle`);
@@ -569,7 +570,7 @@ export class EscenaSantuario extends Phaser.Scene {
     } else {
       // Estado despierto / ocioso en el claro central
       const targetX = 960;
-      const targetY = this.suelo;
+      const targetY = this.sueloRonin;
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(false);
         this.roninSprite.play(`${this.prefijo}idle`);
@@ -607,7 +608,7 @@ export class EscenaSantuario extends Phaser.Scene {
       }
     }
 
-    this.atacanteSprite = this.add.sprite(-150, this.suelo, clave('idle-0'));
+    this.atacanteSprite = this.add.sprite(-150, this.sueloRonin, clave('idle-0'));
     this.atacanteSprite.setOrigin(0.5, 1);
     this.atacanteSprite.setScale(this.escalaRonin);
     this.atacanteSprite.setDepth(11);
