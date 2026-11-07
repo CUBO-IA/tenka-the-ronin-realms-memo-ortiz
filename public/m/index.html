@@ -60,7 +60,72 @@
         </div>
       </section>
 
-      <!-- El rōnin ya existe -->
+      <!-- Pantalla de órdenes del rōnin -->
+      <section id="pantalla-ordenes" class="oculto" aria-labelledby="ordenes-titulo">
+        <div class="panel-ordenes marco-madera">
+          <div class="ordenes-cabecera">
+            <div class="ordenes-kamon-marco">
+              <span id="ordenes-kamon" class="kamon-mask"></span>
+            </div>
+            <div class="ordenes-identidad">
+              <p class="antetitulo" id="ordenes-camino">Light path · Era 1</p>
+              <h2 id="ordenes-titulo">Your Rōnin</h2>
+            </div>
+          </div>
+
+          <!-- Tira de recursos del santuario -->
+          <div class="ordenes-recursos" id="ordenes-recursos" aria-label="Sanctuary resources"></div>
+
+          <!-- Estado del rōnin y progreso -->
+          <div class="ordenes-estado-caja" id="ordenes-estado-caja">
+            <div class="estado-indicador">
+              <span class="punto-pulso" id="estado-pulso"></span>
+              <span id="ordenes-estado-texto">At rest in the sanctuary</span>
+            </div>
+            <div class="barra-progreso oculto" id="barra-progreso">
+              <div class="progreso-relleno" id="progreso-relleno"></div>
+            </div>
+            <p class="tiempo-restante oculto" id="tiempo-restante"></p>
+          </div>
+
+          <!-- Pergamino del rōnin -->
+          <div class="pergamino-mensaje">
+            <p class="antetitulo">The Rōnin Speaks</p>
+            <blockquote id="texto-mensaje" class="texto-mensaje">
+              Master, I have arrived at the sanctuary. What shall I do first?
+            </blockquote>
+          </div>
+
+          <!-- Decisiones / Opciones -->
+          <div class="ordenes-opciones">
+            <p class="etiqueta-seccion">Orders</p>
+            <div id="lista-opciones" class="lista-opciones" role="group" aria-label="Available commands"></div>
+          </div>
+
+          <!-- Orden libre por texto (preparado para Hito 3) -->
+          <form id="form-orden-libre" class="form-orden-libre">
+            <label class="etiqueta-seccion" for="entrada-orden-libre">
+              Speak an order
+            </label>
+            <div class="fila-entrada-orden">
+              <input
+                type="text"
+                id="entrada-orden-libre"
+                class="entrada-papel"
+                placeholder="Give an order in your voice…"
+                maxlength="120"
+                autocomplete="off"
+              />
+              <button type="submit" id="btn-enviar-orden" class="boton-laca boton-enviar-orden">
+                Speak
+              </button>
+            </div>
+            <p id="respuesta-orden-libre" class="respuesta-orden-libre oculto" role="status"></p>
+          </form>
+        </div>
+      </section>
+
+      <!-- El rōnin ya existe (ficha histórica) -->
       <section id="estado-despierto" class="oculto" aria-labelledby="despierto-titulo">
         <div class="despierto-marco marco-madera">
           <div class="despierto-figura">
@@ -188,6 +253,7 @@
       </form>
     </main>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="/m/m.js"></script>
   </body>
 </html>

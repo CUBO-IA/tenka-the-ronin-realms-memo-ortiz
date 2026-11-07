@@ -11,6 +11,7 @@ const VISTAS = [
   'estado-sin-sesion',
   'estado-error',
   'estado-despierto',
+  'pantalla-ordenes',
   'form-ronin',
 ];
 
@@ -263,38 +264,232 @@ function iniciarFormulario(datos) {
   mostrarVista('form-ronin');
 }
 
-async function mostrarDespierto(ronin, recienCreado) {
-  opciones = opciones || { bandos: [], hakamas: [] };
+let socket = null;
+let relojTarea = null;
+let roninActual = null;
+let recursosActuales = {};
+let mensajeActual = null;
 
-  const bando = opciones.bandos.find((elemento) => elemento.id === ronin.bando);
-  const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
-  const hakama = opciones.hakamas.find((elemento) => elemento.id === ronin.hakama);
+const ICONO_RECURSO = {
+  cedro: 'madera',
+  sauce: 'sauce',
+  piedra: 'piedra',
+  lodo: 'lodo',
+  hierro: 'arena-hierro',
+  hongos: 'hongos',
+  arroz: 'arroz',
+  mon: 'mon',
+};
 
-  document.body.dataset.bando = ronin.bando;
-  tituloMovil.textContent = 'Your Rōnin';
+function iconoDeRecurso(tipo) {
+  return ICONO_RECURSO[tipo] || tipo;
+}
 
-  $('#despierto-titulo').textContent = `${ronin.nombre} is awake`;
-  $('#despierto-detalle').textContent = recienCreado
-    ? `The ${ronin.bandoEtiqueta} path is chosen. Return to the computer to watch him arrive.`
-    : 'Your rōnin has already awakened. Return to the computer to watch him.';
-  aplicarKamon($('#despierto-kamon'), ronin.kamon);
+function conectarSocketMovil() {
+  if (socket) return;
+  if (typeof io === 'undefined') return;
 
-  $('#despierto-kimono-color').style.background = kimono?.color || '#888';
-  $('#despierto-kimono').textContent = kimono?.etiqueta || ronin.kimono;
-  $('#despierto-hakama-color').style.background = hakama?.color || '#888';
-  $('#despierto-hakama').textContent = hakama?.etiqueta || ronin.hakama;
-  $('#despierto-camino').textContent = `${ronin.bandoEtiqueta} path · Era ${ronin.era}`;
+  socket = io({ forceNew: true });
 
-  mostrarVista('estado-despierto');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  socket.on('ronin:actualizado', (datos) => {
+    if (datos?.ronin) {
+      roninActual = datos.ronin;
+      actualizarEstadoTarea();
+    }
+  });
 
-  try {
-    const dibujo = await cargarPiezas(ronin.bando, ronin.tocado);
-    pintarRonin($('#despierto-lienzo'), dibujo, kimono?.color, hakama?.color);
-  } catch {
-    // La tarjeta sigue mostrando el resto aunque falte el sprite.
+  socket.on('recursos:actualizados', (datos) => {
+    if (datos?.recursos) {
+      recursosActuales = datos.recursos;
+      renderRecursos();
+    }
+  });
+
+  socket.on('mensaje:nuevo', (datos) => {
+    if (datos?.mensaje) {
+      mensajeActual = datos.mensaje;
+      renderMensajeYComandos();
+    }
+  });
+}
+
+function renderRecursos() {
+  const contenedor = $('#ordenes-recursos');
+  if (!contenedor) return;
+  contenedor.innerHTML = '';
+
+  for (const [tipo, cantidad] of Object.entries(recursosActuales)) {
+    const chip = document.createElement('span');
+    chip.className = 'recurso-chip';
+    const archivoIcono = iconoDeRecurso(tipo);
+    chip.innerHTML = `<img src="/assets/icono-${archivoIcono}.png" alt="" /><span>${cantidad}</span>`;
+    contenedor.append(chip);
   }
 }
+
+function actualizarEstadoTarea() {
+  const pulso = $('#estado-pulso');
+  const texto = $('#ordenes-estado-texto');
+  const barra = $('#barra-progreso');
+  const relleno = $('#progreso-relleno');
+  const tiempo = $('#tiempo-restante');
+  const botones = $$('.boton-opcion');
+
+  if (relojTarea) {
+    clearInterval(relojTarea);
+    relojTarea = null;
+  }
+
+  const fin = roninActual?.tareaFin || 0;
+  const ahora = Date.now();
+
+  if (fin && fin > ahora) {
+    pulso.classList.add('ocupado');
+    barra.classList.remove('oculto');
+    tiempo.classList.remove('oculto');
+
+    for (const btn of botones) btn.disabled = true;
+
+    let descripcion = 'Working…';
+    try {
+      const tarea = JSON.parse(roninActual.tarea || '{}');
+      if (tarea.accion === 'recolectar') {
+        descripcion = `Gathering ${tarea.parametros?.recurso || 'resources'}`;
+      } else if (tarea.accion === 'construir') {
+        descripcion = `Constructing ${tarea.parametros?.edificio || 'building'}`;
+      } else if (tarea.accion === 'descansar') {
+        descripcion = 'Resting at sanctuary';
+      }
+    } catch {
+      descripcion = 'Working on task…';
+    }
+
+    const duracionTotal = fin - ahora;
+
+    const actualizarReloj = () => {
+      const restanteMs = fin - Date.now();
+      if (restanteMs <= 0) {
+        clearInterval(relojTarea);
+        relojTarea = null;
+        texto.textContent = 'Finishing task…';
+        tiempo.textContent = 'Awaiting update…';
+        relleno.style.width = '100%';
+        return;
+      }
+
+      const seg = Math.ceil(restanteMs / 1000);
+      texto.textContent = `${descripcion}`;
+      tiempo.textContent = `${seg}s remaining`;
+      const pct = Math.max(0, Math.min(100, ((duracionTotal - restanteMs) / duracionTotal) * 100));
+      relleno.style.width = `${pct}%`;
+    };
+
+    actualizarReloj();
+    relojTarea = setInterval(actualizarReloj, 250);
+  } else {
+    pulso.classList.remove('ocupado');
+    barra.classList.add('oculto');
+    tiempo.classList.add('oculto');
+    relleno.style.width = '0%';
+    texto.textContent = 'At rest in the sanctuary';
+
+    for (const btn of botones) btn.disabled = false;
+  }
+}
+
+function renderMensajeYComandos() {
+  const textoMensaje = $('#texto-mensaje');
+  const lista = $('#lista-opciones');
+  if (!textoMensaje || !lista) return;
+
+  if (mensajeActual?.texto) {
+    textoMensaje.textContent = mensajeActual.texto;
+  }
+
+  lista.innerHTML = '';
+  const opcionesLista = mensajeActual?.opciones || [];
+  const ocupado = Boolean(roninActual?.tareaFin && roninActual.tareaFin > Date.now());
+
+  for (const op of opcionesLista) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'boton-opcion';
+    btn.disabled = ocupado;
+    btn.textContent = op.etiqueta || op.accion;
+    btn.addEventListener('click', async () => {
+      for (const b of $$('.boton-opcion')) b.disabled = true;
+      try {
+        const respuesta = await api('/api/acciones', {
+          method: 'POST',
+          body: JSON.stringify(op),
+        });
+        if (respuesta.ronin) {
+          roninActual = respuesta.ronin;
+          actualizarEstadoTarea();
+        }
+        if (respuesta.recursos) {
+          recursosActuales = respuesta.recursos;
+          renderRecursos();
+        }
+      } catch (err) {
+        alert(err.message || 'Could not execute order.');
+        actualizarEstadoTarea();
+      }
+    });
+    lista.append(btn);
+  }
+}
+
+function mostrarOrdenes(datos) {
+  roninActual = datos.ronin;
+  recursosActuales = datos.recursos || {};
+  mensajeActual = datos.mensaje || null;
+
+  document.body.dataset.bando = roninActual.bando;
+  tituloMovil.textContent = 'Sanctuary';
+
+  $('#ordenes-titulo').textContent = roninActual.nombre;
+  $('#ordenes-camino').textContent = `${roninActual.bandoEtiqueta} path · Era ${roninActual.era} (Sanctuary)`;
+  aplicarKamon($('#ordenes-kamon'), roninActual.kamon);
+
+  renderRecursos();
+  actualizarEstadoTarea();
+  renderMensajeYComandos();
+
+  conectarSocketMovil();
+  mostrarVista('pantalla-ordenes');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Formulario de orden libre por texto
+const formOrdenLibre = $('#form-orden-libre');
+const entradaOrdenLibre = $('#entrada-orden-libre');
+const respuestaOrdenLibre = $('#respuesta-orden-libre');
+
+formOrdenLibre?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const texto = entradaOrdenLibre.value.trim();
+  if (!texto) return;
+
+  const btn = $('#btn-enviar-orden');
+  btn.disabled = true;
+  respuestaOrdenLibre.classList.add('oculto');
+
+  try {
+    const res = await api('/api/orden-texto', {
+      method: 'POST',
+      body: JSON.stringify({ texto }),
+    });
+    respuestaOrdenLibre.textContent = res.respuesta || 'The rōnin heard your order.';
+    respuestaOrdenLibre.classList.remove('oculto');
+    entradaOrdenLibre.value = '';
+  } catch (err) {
+    respuestaOrdenLibre.textContent = err.message || 'Could not send order.';
+    respuestaOrdenLibre.classList.remove('oculto');
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 formRonin.addEventListener('submit', async (evento) => {
   evento.preventDefault();
@@ -326,13 +521,13 @@ formRonin.addEventListener('submit', async (evento) => {
       }),
     });
 
-    mostrarDespierto(datos.ronin, true);
+    mostrarOrdenes(datos);
   } catch (error) {
     if (error.codigo === 'RONIN_EXISTENTE') {
       try {
         const actual = await api('/api/yo-movil');
         if (actual.ronin) {
-          mostrarDespierto(actual.ronin, false);
+          mostrarOrdenes(actual);
           return;
         }
       } catch {
@@ -357,7 +552,7 @@ async function iniciar() {
     opciones = datos.opciones;
 
     if (datos.ronin) {
-      mostrarDespierto(datos.ronin, false);
+      mostrarOrdenes(datos);
       return;
     }
 

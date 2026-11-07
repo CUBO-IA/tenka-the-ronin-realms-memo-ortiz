@@ -725,3 +725,258 @@
     height: 37px;
   }
 }
+
+/* ==========================================================================
+   Pantalla de órdenes (Pergamino de órdenes del rōnin)
+   ========================================================================== */
+
+.panel-ordenes {
+  padding: 1.1rem 1rem 1.4rem;
+  margin-top: 0.6rem;
+  color: var(--texto-fondo);
+}
+
+.ordenes-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--texto-fondo) 16%, transparent);
+}
+
+.ordenes-kamon-marco {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--crest);
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.ordenes-kamon-marco .kamon-mask {
+  width: 38px;
+  height: 38px;
+  background: #fdf5e2;
+}
+
+.ordenes-identidad h2 {
+  font-size: 1.45rem;
+  font-weight: 500;
+  line-height: 1.1;
+  margin-top: 0.1rem;
+}
+
+/* --- Tira de recursos --- */
+.ordenes-recursos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0;
+  padding: 0.5rem 0.6rem;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--texto-fondo) 12%, transparent);
+}
+
+.recurso-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #241f18;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.pagina-movil[data-bando="sombra"] .recurso-chip {
+  background: rgba(30, 22, 40, 0.75);
+  color: #f4ecdc;
+}
+
+.recurso-chip img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* --- Estado actual --- */
+.ordenes-estado-caja {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 0.9rem;
+  background: color-mix(in srgb, var(--texto-fondo) 6%, transparent);
+  border-radius: 8px;
+  border: 1px dashed color-mix(in srgb, var(--texto-fondo) 24%, transparent);
+}
+
+.estado-indicador {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.punto-pulso {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2a8a48;
+  box-shadow: 0 0 0 0 rgba(42, 138, 72, 0.7);
+  animation: pulso-activo 1.8s infinite;
+}
+
+.punto-pulso.ocupado {
+  background: #c86820;
+  box-shadow: 0 0 0 0 rgba(200, 104, 32, 0.7);
+}
+
+@keyframes pulso-activo {
+  0% {
+    box-shadow: 0 0 0 0 rgba(42, 138, 72, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(42, 138, 72, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(42, 138, 72, 0);
+  }
+}
+
+.barra-progreso {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  margin-top: 0.55rem;
+  overflow: hidden;
+}
+
+.progreso-relleno {
+  height: 100%;
+  width: 0%;
+  background: #b5382b;
+  transition: width 0.25s linear;
+}
+
+.tiempo-restante {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--texto-suave-fondo);
+  text-align: right;
+}
+
+/* --- Pergamino con la voz del rōnin --- */
+.pergamino-mensaje {
+  position: relative;
+  margin: 1rem 0;
+  padding: 1.1rem 1.2rem;
+  background: #fdfaf2;
+  border: 14px solid transparent;
+  border-image: url("/assets/tira-papel.png") 36 fill / 14px stretch;
+  box-shadow: 0 4px 12px rgba(30, 20, 10, 0.15);
+  color: #241f18;
+}
+
+.pergamino-mensaje .antetitulo {
+  color: #8b5b29;
+  font-size: 0.68rem;
+  margin-bottom: 0.35rem;
+}
+
+.texto-mensaje {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  font-style: italic;
+  font-family: serif;
+}
+
+/* --- Lista de opciones de órdenes --- */
+.etiqueta-seccion {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-suave-fondo);
+  margin-bottom: 0.45rem;
+}
+
+.lista-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 1.25rem;
+}
+
+.boton-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.8rem 1.1rem;
+  border: 11px solid transparent;
+  border-image: url("/assets/boton-laca.png") 34 fill / 11px stretch;
+  background: transparent;
+  color: #fdf5e2;
+  font-size: 0.98rem;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(40, 6, 4, 0.85);
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.boton-opcion:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.boton-opcion:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.boton-opcion:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+/* --- Orden libre por texto --- */
+.form-orden-libre {
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--texto-fondo) 16%, transparent);
+}
+
+.fila-entrada-orden {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.fila-entrada-orden .entrada-papel {
+  flex: 1;
+  min-width: 0;
+}
+
+.boton-enviar-orden {
+  padding: 0.5rem 0.95rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.respuesta-orden-libre {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  color: var(--texto-suave-fondo);
+}
+
