@@ -2,7 +2,7 @@ import { edificioPorTipo, obtenerRecursos } from './acciones.js';
 import { mensajeDelRonin } from './agente.js';
 import { enviarPush } from './push.js';
 import { resumenPorId } from './mundo.js';
-import { efectosDeEdificios, resolverBatalla, sumarTropa, textosDeBatalla, tropasDe } from './conflicto.js';
+import { efectosDeEdificios, resolverBatalla, simularCombate, sumarTropa, textosDeBatalla, tropasDe } from './conflicto.js';
 import { cobrarConstruccion, guardarMensaje, obtenerEdificios } from './acciones.js';
 import { reglas } from './reglas.js';
 import { serializarRonin } from './ronin.js';
@@ -57,6 +57,34 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
       tarea = JSON.parse(ronin.tarea);
     } catch {
       tarea = null;
+    }
+
+    // La marcha llegó: se simula el combate golpe a golpe y el rōnin sigue
+    // ocupado hasta que termine; recién entonces se aplican las consecuencias.
+    if (tarea?.accion === 'atacar' && tarea.fase !== 'combate') {
+      const defensor = db.prepare('SELECT * FROM ronin WHERE id = ?').get(tarea.parametros?.clan);
+      if (defensor) {
+        const combate = simularCombate(db, ronin, defensor);
+        const tareaCombate = { ...tarea, fase: 'combate', combate, inicioCombate: ahora };
+        db.prepare('UPDATE ronin SET tarea = ?, tarea_fin = ? WHERE id = ?').run(
+          JSON.stringify(tareaCombate),
+          ahora + combate.duracionMs,
+          ronin.id,
+        );
+        if (io && typeof io.emit === 'function') {
+          io.emit('batalla:combate', {
+            atacante: resumenPorId(db, ronin.id),
+            defensor: resumenPorId(db, defensor.id),
+            golpes: combate.golpes,
+            vida: reglas.conflicto.combate.vida,
+            duracionMs: combate.duracionMs,
+            entradaMs: reglas.conflicto.combate.entradaMs,
+          });
+          const roninFila = db.prepare('SELECT * FROM ronin WHERE id = ?').get(ronin.id);
+          io.to(`usuario:${ronin.usuario_id}`).emit('ronin:actualizado', { ronin: serializarRonin(roninFila) });
+        }
+        continue;
+      }
     }
 
     if (!tarea) {
@@ -127,7 +155,7 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
     // La marcha llegó: se pelea en el santuario del defensor. El resultado
     // sale a las pantallas de inmediato; los mensajes con IA vienen después.
     if (tarea.accion === 'atacar') {
-      batalla = resolverBatalla(db, ronin, tarea.parametros?.clan, ahora);
+      batalla = resolverBatalla(db, ronin, tarea.parametros?.clan, ahora, Math.random, tarea.combate || null);
       if (batalla && io && typeof io.emit === 'function') io.emit('batalla:resultado', batalla);
     }
 

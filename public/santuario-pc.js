@@ -186,12 +186,16 @@ export function modoActual() {
 }
 
 // Una marcha llegó a un santuario que está en pantalla (propio o visitado).
+// La marcha empezó: en el mapa se ve; la pelea llega con batalla:combate.
 export function batallaInicio(batalla) {
-  const activa = escena();
-  if (activa && activa.ronin?.id === batalla?.defensor?.id) {
-    activa.mostrarAtaque(batalla.atacante);
-  }
   escenaMapa()?.actualizarRonin({ ...batalla.atacante, estado: 'atacando' });
+}
+
+export function batallaCombate(datos) {
+  const activa = escena();
+  if (activa && activa.ronin?.id === datos?.defensor?.id) {
+    activa.mostrarCombate(datos);
+  }
 }
 
 // El resultado se ve en la escena (pública); el parte y la tarjeta de

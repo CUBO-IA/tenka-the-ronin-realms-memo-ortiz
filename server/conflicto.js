@@ -342,18 +342,61 @@ function azar(fuerza, semilla) {
   return Math.round(fuerza * factor * 10) / 10;
 }
 
+// El combate, golpe a golpe. Devuelve la lista de golpes con el tiempo de cada
+// uno, para que las pantallas lo muestren igual que lo decidió el servidor.
+export function simularCombate(db, atacante, defensor, aleatorio = Math.random) {
+  const c = conf();
+  const cc = c.combate;
+  const desglose = { ataque: desgloseAtaque(db, atacante), defensa: desgloseDefensa(db, defensor) };
+  const A = Math.max(1, sumar(desglose.ataque));
+  const D = Math.max(1, sumar(desglose.defensa));
+  let vidaA = cc.vida;
+  let vidaD = cc.vida;
+  const golpes = [];
+  let t = cc.entradaMs;
+
+  const golpe = (fuerzaPropia, fuerzaOtra) => {
+    const base = cc.vida * cc.factorGolpe * (fuerzaPropia / (fuerzaPropia + fuerzaOtra));
+    const factor = 1 + (aleatorio() * 2 - 1) * cc.azarGolpe;
+    return Math.max(1, Math.round(base * factor));
+  };
+
+  for (let ronda = 0; ronda < cc.maxRondas && vidaA > 0 && vidaD > 0; ronda += 1) {
+    vidaD = Math.max(0, vidaD - golpe(A, D));
+    golpes.push({ t, quien: 'atacante', vidaA, vidaD });
+    if (vidaD <= 0) break;
+    t += cc.ritmoMs / 2;
+    vidaA = Math.max(0, vidaA - golpe(D, A));
+    golpes.push({ t, quien: 'defensor', vidaA, vidaD });
+    t += cc.ritmoMs / 2;
+  }
+
+  const ganador = vidaD <= 0 ? 'atacante' : vidaA <= 0 ? 'defensor' : vidaA >= vidaD ? 'atacante' : 'defensor';
+  return {
+    golpes,
+    ganador,
+    vidaA,
+    vidaD,
+    ataque: A,
+    defensa: D,
+    desglose,
+    duracionMs: t + 1200,
+  };
+}
+
 // Resuelve una batalla y aplica sus consecuencias. `aleatorio` se inyecta en pruebas.
-export function resolverBatalla(db, atacante, defensorId, ahora = Date.now(), aleatorio = Math.random) {
+// Si viene `combate` (ya simulado), se respeta su ganador y sus fuerzas.
+export function resolverBatalla(db, atacante, defensorId, ahora = Date.now(), aleatorio = Math.random, combate = null) {
   const c = conf();
   const defensor = filaRonin(db, defensorId);
   if (!defensor) return null;
 
-  const desglose = { ataque: desgloseAtaque(db, atacante), defensa: desgloseDefensa(db, defensor) };
-  const ataqueBruto = sumar(desglose.ataque);
-  const defensaBruta = sumar(desglose.defensa);
-  const ataque = azar(ataqueBruto, aleatorio());
-  const defensa = azar(defensaBruta, aleatorio());
-  const ganaAtacante = ataque > defensa;
+  const desglose = combate?.desglose || { ataque: desgloseAtaque(db, atacante), defensa: desgloseDefensa(db, defensor) };
+  const ataqueBruto = combate?.ataque ?? sumar(desglose.ataque);
+  const defensaBruta = combate?.defensa ?? sumar(desglose.defensa);
+  const ataque = combate ? ataqueBruto : azar(ataqueBruto, aleatorio());
+  const defensa = combate ? defensaBruta : azar(defensaBruta, aleatorio());
+  const ganaAtacante = combate ? combate.ganador === 'atacante' : ataque > defensa;
   const botin = {};
   let edificioDanado = null;
   let tropasPerdidas = {};
@@ -406,6 +449,8 @@ export function resolverBatalla(db, atacante, defensorId, ahora = Date.now(), al
     defensaBruta,
     desglose,
     ganador: ganaAtacante ? 'atacante' : 'defensor',
+    vidaA: combate?.vidaA ?? null,
+    vidaD: combate?.vidaD ?? null,
     botin,
     edificioDanado,
     tropasPerdidas,

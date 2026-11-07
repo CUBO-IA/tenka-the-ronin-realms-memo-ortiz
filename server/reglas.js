@@ -148,7 +148,10 @@ export const reglas = {
     desdeEra: 2,
     // La era 2 empieza con la espada: hasta la primera batalla no se construye la aldea.
     primerAtaqueAntesDeConstruir: true,
-    marchaMs: 8000, // lo que tarda el ataque en llegar
+    marchaMs: 6000, // lo que tarda el ataque en llegar
+    // El combate se pelea por golpes: cada ronda se pegan los dos, el daño sale de
+    // la fuerza de cada lado. Gana quien deja al otro sin vida.
+    combate: { vida: 100, ritmoMs: 1500, factorGolpe: 0.28, azarGolpe: 0.3, maxRondas: 20, entradaMs: 2000 },
     entrenarMs: 5000,
     azar: 0.25, // ±25 % en cada fuerza
     botinPorcentaje: 0.3,

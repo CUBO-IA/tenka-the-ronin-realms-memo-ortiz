@@ -74,7 +74,41 @@ function avisarMensajeNuevo() {
 
 window.addEventListener('pointerdown', prepararAudio, { once: true });
 
+let relojesCombate = [];
+
+function pintarVida(id, vida, max) {
+  const barra = $(`#${id}`);
+  if (!barra) return;
+  const fraccion = Math.max(0, vida / max);
+  barra.style.width = `${fraccion * 100}%`;
+  barra.classList.toggle('media', fraccion <= 0.5 && fraccion > 0.25);
+  barra.classList.toggle('baja', fraccion <= 0.25);
+}
+
+function mostrarCombateMovil(datos) {
+  for (const reloj of relojesCombate) clearTimeout(reloj);
+  relojesCombate = [];
+  const caja = $('#combate-vida');
+  $('#vida-nombre-a').textContent = datos.atacante.nombre;
+  $('#vida-nombre-d').textContent = datos.defensor.nombre;
+  pintarVida('vida-a', datos.vida, datos.vida);
+  pintarVida('vida-d', datos.vida, datos.vida);
+  caja.classList.remove('oculto');
+  $('#ordenes-estado-texto').textContent = `Fighting ${datos.atacante.id === roninActual.id ? datos.defensor.nombre : datos.atacante.nombre}`;
+  for (const golpe of datos.golpes) {
+    relojesCombate.push(
+      setTimeout(() => {
+        pintarVida('vida-a', golpe.vidaA, datos.vida);
+        pintarVida('vida-d', golpe.vidaD, datos.vida);
+      }, golpe.t),
+    );
+  }
+  relojesCombate.push(setTimeout(() => caja.classList.add('oculto'), datos.duracionMs + 4000));
+}
+
 function mostrarTarjetaBatalla(resultado, soyAtacante) {
+  for (const reloj of relojesCombate) clearTimeout(reloj);
+  $('#combate-vida')?.classList.add('oculto');
   const gane = (resultado.ganador === 'atacante') === soyAtacante;
   const otro = soyAtacante ? resultado.defensor : resultado.atacante;
   const tarjeta = $('#tarjeta-batalla');
@@ -770,6 +804,15 @@ function conectarSocketMovil() {
         : 'Era 2 opens the village: train troops, raise the terraces, forge and walls, offer alliances, and raid other sanctuaries for resources.';
     $('#tarjeta-era').classList.remove('oculto');
     avisarMensajeNuevo();
+  });
+
+  // Mi rōnin está peleando: las vidas bajan golpe a golpe.
+  socket.on('batalla:combate', (datos) => {
+    if (!roninActual || !datos?.golpes) return;
+    const soyAtacante = datos.atacante?.id === roninActual.id;
+    const soyDefensor = datos.defensor?.id === roninActual.id;
+    if (!soyAtacante && !soyDefensor) return;
+    mostrarCombateMovil(datos);
   });
 
   // Mi rōnin peleó: la tarjeta de victoria o derrota, antes del parte en el chat.

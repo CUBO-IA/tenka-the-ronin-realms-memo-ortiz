@@ -8,6 +8,7 @@ import {
   interpretarOrden,
   interpretarPorPalabras,
   mensajeDelRonin,
+  idiomaDelMaestro,
   validarRespuesta,
 } from '../server/agente.js';
 import { crearIa } from '../server/ia.js';
@@ -42,6 +43,13 @@ const sinIa = crearIa({ env: {}, fetchImpl: async () => new Response('', { statu
 afterEach(() => configurarAgente(sinIa));
 
 describe('agente: el modelo propone, el código decide', () => {
+  test('detecta el idioma del maestro por lo que escribe', () => {
+    const { db, ronin } = prepararJuego();
+    assert.equal(idiomaDelMaestro(db, ronin.id, 'Go gather some cedar for the house'), 'en');
+    assert.equal(idiomaDelMaestro(db, ronin.id, '¿Qué puedo hacer ahora? Vamos a construir la casa'), 'es');
+    assert.equal(idiomaDelMaestro(db, ronin.id, ''), 'en');
+  });
+
   test('validarRespuesta descarta acciones inventadas y completa hasta dos', () => {
     const validas = [
       { accion: 'recolectar', parametros: { recurso: 'cedro' }, etiqueta: 'Gather Cedar wood' },

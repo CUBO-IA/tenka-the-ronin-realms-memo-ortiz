@@ -6,6 +6,7 @@ import {
   actualizarEdificio,
   actualizarEdificios,
   actualizarMapa,
+  batallaCombate,
   batallaInicio,
   batallaResultado,
   actualizarRecursos,
@@ -216,8 +217,8 @@ let relojRegreso = null;
 
 async function seguirMarcha(batalla) {
   clearTimeout(relojRegreso);
-  await visitar(batalla.defensor.id, `${ronin.nombre} marches on ${batalla.defensor.nombre}'s sanctuary`);
   batallaInicio(batalla);
+  await visitar(batalla.defensor.id, `${ronin.nombre} marches on ${batalla.defensor.nombre}'s sanctuary`);
 }
 
 function volverTrasBatalla() {
@@ -363,6 +364,10 @@ function conectarSocket() {
       return;
     }
     batallaInicio(datos);
+  });
+
+  socket.on('batalla:combate', (datos) => {
+    if (datos?.golpes) batallaCombate(datos);
   });
 
   socket.on('batalla:resultado', (datos) => {

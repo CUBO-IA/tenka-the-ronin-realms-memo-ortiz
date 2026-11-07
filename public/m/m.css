@@ -1439,3 +1439,37 @@
 .ficha-acciones .boton-laca:disabled {
   opacity: 0.5;
 }
+
+/* --- Vida durante el combate --- */
+.combate-vida {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.vida-fila {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-family: var(--serif);
+}
+
+.vida-barra {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.vida-relleno {
+  height: 100%;
+  width: 100%;
+  background: #2a8a48;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.vida-relleno.media { background: #c86820; }
+.vida-relleno.baja { background: #9e2b25; }

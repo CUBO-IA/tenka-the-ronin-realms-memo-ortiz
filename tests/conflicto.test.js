@@ -99,7 +99,16 @@ describe('conflicto: alianzas, tropas y ataques', () => {
 
     const eventos = [];
     const ioFalso = { to: () => ({ emit: (n, d) => eventos.push(n) }), emit: (n) => eventos.push(n) };
-    const completados = await avanzarMundo(db, ioFalso, ahora + marcha.duracionMs + 1);
+    // Primero llega la marcha: empieza el combate por golpes y el rōnin sigue ocupado.
+    const llegada = await avanzarMundo(db, ioFalso, ahora + marcha.duracionMs + 1);
+    assert.equal(llegada.length, 0);
+    assert.ok(eventos.includes('batalla:combate'));
+    const enCombate = fila(hana.id);
+    const tareaCombate = JSON.parse(enCombate.tarea);
+    assert.equal(tareaCombate.fase, 'combate');
+    assert.ok(tareaCombate.combate.golpes.length >= 1);
+    // Cuando el combate termina, se aplican las consecuencias.
+    const completados = await avanzarMundo(db, ioFalso, enCombate.tarea_fin + 1);
     assert.equal(completados.length, 1);
     assert.ok(completados[0].batalla);
     assert.ok(['atacante', 'defensor'].includes(completados[0].batalla.ganador));
@@ -164,8 +173,27 @@ describe('conflicto: alianzas, tropas y ataques', () => {
 
     const marcha = ejecutarOrden(db, hana.id, { accion: 'atacar', parametros: { clan: ryo.id } }, 2000);
     await avanzarMundo(db, null, 2000 + marcha.duracionMs + 1);
+    await avanzarMundo(db, null, fila(hana.id).tarea_fin + 1);
     const despues = accionesValidas(db, fila(hana.id));
     assert.ok(despues.some((a) => a.accion === 'construir' && a.parametros.edificio === 'terrazas'));
+  });
+
+  test('el combate por golpes termina cuando uno se queda sin vida y el más fuerte suele ganar', () => {
+    const { db, hana, ryo, fila, subirEra } = mundoDePrueba();
+    subirEra(hana.id, 2);
+    subirEra(ryo.id, 2);
+    for (const tipo of ['choza', 'pozo', 'circulo', 'altar', 'muro']) {
+      db.prepare("INSERT INTO edificios (ronin_id, tipo, etapa, progreso, creado, actualizado) VALUES (?, ?, 'terminado', 100, 1, 1)").run(ryo.id, tipo);
+    }
+    const combate = conflicto.simularCombate(db, fila(hana.id), fila(ryo.id), () => 0.5);
+    assert.equal(combate.ganador, 'defensor');
+    assert.equal(combate.vidaA, 0);
+    assert.ok(combate.vidaD > 0);
+    const ultimo = combate.golpes.at(-1);
+    assert.equal(ultimo.quien, 'defensor');
+    assert.ok(combate.duracionMs > combate.golpes.length * 500);
+    // Cada golpe tiene su tiempo creciente.
+    for (let i = 1; i < combate.golpes.length; i += 1) assert.ok(combate.golpes[i].t > combate.golpes[i - 1].t);
   });
 
   test('la defensa suma parte de la de los aliados', () => {

@@ -619,6 +619,70 @@ export class EscenaSantuario extends Phaser.Scene {
     });
   }
 
+  // El combate golpe a golpe que decidió el servidor: barras de vida sobre los
+  // dos y un golpe animado en cada tiempo.
+  mostrarCombate(datos) {
+    if (!this.roninSprite || !datos?.golpes) return;
+    this.golpesPendientes = datos.golpes;
+    this.vidaMax = datos.vida || 100;
+    this.combateInicio = Date.now();
+    this.mostrarAtaque(datos.atacante);
+    this.crearBarras();
+    for (const golpe of datos.golpes) {
+      this.time.delayedCall(golpe.t, () => this.aplicarGolpe(golpe));
+    }
+  }
+
+  crearBarras() {
+    this.quitarBarras();
+    this.barras = this.add.graphics();
+    this.barras.setDepth(21);
+    this.vidaA = this.vidaMax;
+    this.vidaD = this.vidaMax;
+    this.dibujarBarras();
+  }
+
+  dibujarBarras() {
+    if (!this.barras) return;
+    this.barras.clear();
+    const pintar = (sprite, vida) => {
+      if (!sprite) return;
+      const ancho = 170;
+      const x = sprite.x - ancho / 2;
+      const y = sprite.y - sprite.displayHeight - 36;
+      const fraccion = Math.max(0, vida / this.vidaMax);
+      this.barras.fillStyle(0x1d1c1a, 0.75);
+      this.barras.fillRoundedRect(x - 3, y - 3, ancho + 6, 20, 5);
+      this.barras.fillStyle(fraccion > 0.5 ? 0x2a8a48 : fraccion > 0.25 ? 0xc86820 : 0x9e2b25, 1);
+      this.barras.fillRoundedRect(x, y, Math.max(4, ancho * fraccion), 14, 4);
+    };
+    pintar(this.atacanteSprite, this.vidaA);
+    pintar(this.roninSprite, this.vidaD);
+  }
+
+  aplicarGolpe(golpe) {
+    if (!this.roninSprite) return;
+    this.vidaA = golpe.vidaA;
+    this.vidaD = golpe.vidaD;
+    const golpeado = golpe.quien === 'atacante' ? this.roninSprite : this.atacanteSprite;
+    const golpeador = golpe.quien === 'atacante' ? this.atacanteSprite : this.roninSprite;
+    if (golpeado) {
+      golpeado.setTintFill(0xffffff);
+      this.time.delayedCall(90, () => golpeado.active && golpeado.clearTint());
+      this.tweens.add({ targets: golpeado, x: golpeado.x + (golpe.quien === 'atacante' ? 14 : -14), duration: 80, yoyo: true });
+    }
+    if (golpeador) this.tweens.add({ targets: golpeador, scaleX: golpeador.scaleX * 1.08, scaleY: golpeador.scaleY * 1.08, duration: 90, yoyo: true });
+    this.cameras.main.shake(120, 0.0025);
+    this.dibujarBarras();
+  }
+
+  quitarBarras() {
+    if (this.barras) {
+      this.barras.destroy();
+      this.barras = null;
+    }
+  }
+
   // Resultado: el perdedor cae y se desvanece; el ganador queda en pie.
   resolverAtaque(resultado) {
     if (!this.roninSprite) return;
@@ -649,6 +713,7 @@ export class EscenaSantuario extends Phaser.Scene {
   }
 
   terminarAtaque() {
+    this.quitarBarras();
     if (this.atacanteSprite) {
       this.atacanteSprite.destroy();
       this.atacanteSprite = null;
@@ -715,6 +780,7 @@ export class EscenaSantuario extends Phaser.Scene {
 
   update() {
     this.ubicarGlobo();
+    if (this.barras) this.dibujarBarras();
   }
 
   // Un edificio cambió de etapa o progreso: se reemplaza en la lista y se redibuja.
