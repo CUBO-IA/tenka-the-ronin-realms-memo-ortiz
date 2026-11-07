@@ -38,6 +38,7 @@ export function crearIa({ env = process.env, fetchImpl = globalThis.fetch, confi
   const groqModelo = env.GROQ_MODELO || config.groqModelo;
   const geminiKey = env.GEMINI_API_KEY || '';
   const geminiModelo = env.GEMINI_MODELO || config.geminiModelo;
+  const geminiModeloRespaldo = env.GEMINI_MODELO_RESPALDO || config.geminiModeloRespaldo || '';
 
   // Límite global: llamadas por minuto, sin importar cuántos rōnin haya.
   let ventanaInicio = 0;
@@ -81,10 +82,10 @@ export function crearIa({ env = process.env, fetchImpl = globalThis.fetch, confi
     return extraerJson(datos?.choices?.[0]?.message?.content);
   }
 
-  async function gemini(sistema, usuario) {
+  async function gemini(sistema, usuario, modelo = geminiModelo, timeoutMs = config.timeoutMs) {
     const respuesta = await conTiempo(
       fetchImpl,
-      `${GEMINI_URL}/${encodeURIComponent(geminiModelo)}:generateContent`,
+      `${GEMINI_URL}/${encodeURIComponent(modelo)}:generateContent`,
       {
         method: 'POST',
         headers: {
@@ -101,7 +102,7 @@ export function crearIa({ env = process.env, fetchImpl = globalThis.fetch, confi
           },
         }),
       },
-      config.timeoutMs,
+      timeoutMs,
     );
     if (!respuesta.ok) throw new Error(`Gemini ${respuesta.status}`);
     const datos = await respuesta.json();
@@ -113,6 +114,14 @@ export function crearIa({ env = process.env, fetchImpl = globalThis.fetch, confi
   const proveedores = [];
   if (groqKey) proveedores.push({ nombre: 'groq', pedir: groq });
   if (geminiKey) proveedores.push({ nombre: 'gemini', pedir: gemini });
+  // Segundo modelo de Gemini, en otro cupo: entra cuando el principal está
+  // saturado o se demora, antes de caer a los textos predefinidos.
+  if (geminiKey && geminiModeloRespaldo && geminiModeloRespaldo !== geminiModelo) {
+    proveedores.push({
+      nombre: 'gemini-respaldo',
+      pedir: (sistema, usuario) => gemini(sistema, usuario, geminiModeloRespaldo, config.timeoutRespaldoMs || config.timeoutMs),
+    });
+  }
 
   return {
     disponible: proveedores.length > 0,

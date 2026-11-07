@@ -104,6 +104,40 @@ describe('agente: el modelo propone, el código decide', () => {
     assert.equal(mensaje.opciones[0].etiqueta, 'Cut cedar');
   });
 
+  test('el idioma lo decide lo que escribe el maestro, no los botones en inglés', () => {
+    const { db, ronin } = prepararJuego();
+    for (const etiqueta of ['Gather Cedar wood', 'Build the house', 'Attack Ryo']) {
+      db.prepare("INSERT INTO mensajes (ronin_id, texto, opciones_json, creado, de) VALUES (?, ?, '[]', ?, 'maestro')").run(ronin.id, etiqueta, Date.now());
+    }
+    db.prepare("INSERT INTO mensajes (ronin_id, texto, opciones_json, creado, de) VALUES (?, ?, '[]', ?, 'maestro')").run(ronin.id, 'dale, construye la casa', Date.now());
+    assert.equal(idiomaDelMaestro(db, ronin.id, ''), 'es');
+    assert.equal(idiomaDelMaestro(db, ronin.id, 'Build the house now'), 'en');
+  });
+
+  test('las órdenes en español también se entienden por palabras clave', () => {
+    const { db, ronin } = prepararJuego();
+    const validas = accionesValidas(db, ronin);
+    assert.equal(interpretarPorPalabras('recolectá piedra, por favor', validas).parametros.recurso, 'piedra');
+    assert.equal(interpretarPorPalabras('andá a traer madera', validas).parametros.recurso, 'cedro');
+    assert.equal(interpretarPorPalabras('construye la casa', validas).parametros.edificio, 'casa');
+    assert.equal(interpretarPorPalabras('descansá un rato', validas).accion, 'descansar');
+  });
+
+  test('sin IA, pedir una tropa que no alcanza explica qué falta, en el idioma del maestro', async () => {
+    configurarAgente(sinIa);
+    const { db, ronin } = prepararJuego();
+    db.prepare('UPDATE ronin SET era = 2 WHERE id = ?').run(ronin.id);
+    db.prepare("UPDATE recursos SET cantidad = 3 WHERE ronin_id = ? AND tipo = 'arroz'").run(ronin.id);
+    const roninEra2 = { ...ronin, era: 2 };
+    const r = await interpretarOrden(db, roninEra2, 'crea un samurái', 1000);
+    assert.equal(r.ejecutada, false);
+    assert.match(r.mensaje.texto, /arroz/);
+    assert.match(r.mensaje.texto, /faltan/);
+    const en = await interpretarOrden(db, roninEra2, 'train a samurai now', 5000);
+    assert.equal(en.ejecutada, false);
+    assert.match(en.mensaje.texto, /rice/);
+  });
+
   test('interpretarPorPalabras entiende recolectar, construir y descansar', () => {
     const { db, ronin } = prepararJuego();
     const validas = accionesValidas(db, ronin);

@@ -1,7 +1,7 @@
 // Alianzas, tropas y ataques. Todo se calcula acá, en el servidor; el modelo
 // solo elige entre las opciones que estas funciones declaran válidas.
 
-import { guardarMensaje, obtenerEdificios, obtenerRecursos } from './acciones.js';
+import { aldeaBloqueada, guardarMensaje, obtenerEdificios, obtenerRecursos } from './acciones.js';
 import { ErrorDeJuego } from './errores.js';
 import { infoEdificio, reglas, tropasDeBando } from './reglas.js';
 import { serializarRonin } from './ronin.js';
@@ -264,14 +264,66 @@ export function fuerzaAtaque(db, ronin) {
 }
 
 // null si se puede atacar; si no, el motivo en inglés.
-export function motivoNoAtacar(db, atacante, defensor, ahora = Date.now()) {
+export function motivoNoAtacar(db, atacante, defensor, ahora = Date.now(), idioma = 'en') {
   const c = conf();
-  if (!defensor || defensor.id === atacante.id) return 'There is no such clan.';
-  if (atacante.era < c.desdeEra) return `You can march from Era ${c.desdeEra}.`;
-  if (defensor.era < c.desdeEra) return `${defensor.nombre}'s sanctuary is still hidden in the mist.`;
-  if (alianzaEntre(db, atacante.id, defensor.id)?.estado === 'activa') return `${defensor.nombre} is your ally.`;
-  if (defensor.escudo_hasta && defensor.escudo_hasta > ahora) return `${defensor.nombre}'s sanctuary is shielded.`;
+  const es = idioma === 'es';
+  if (!defensor || defensor.id === atacante.id) return es ? 'No existe ese clan.' : 'There is no such clan.';
+  if (atacante.era < c.desdeEra) return es ? `Podemos marchar desde la Era ${c.desdeEra}.` : `You can march from Era ${c.desdeEra}.`;
+  if (defensor.era < c.desdeEra) {
+    return es ? `El santuario de ${defensor.nombre} sigue oculto en la niebla.` : `${defensor.nombre}'s sanctuary is still hidden in the mist.`;
+  }
+  if (alianzaEntre(db, atacante.id, defensor.id)?.estado === 'activa') return es ? `${defensor.nombre} es nuestro aliado.` : `${defensor.nombre} is your ally.`;
+  if (defensor.escudo_hasta && defensor.escudo_hasta > ahora) {
+    return es ? `El santuario de ${defensor.nombre} está protegido por su escudo.` : `${defensor.nombre}'s sanctuary is shielded.`;
+  }
   return null;
+}
+
+const TROPA_ES = { samurai: 'un samurái', arquero: 'un arquero', oni: 'un oni', kitsune: 'un kitsune' };
+
+// Lo que el maestro podría pedir y hoy no se puede, con el porqué en los dos
+// idiomas: datos para la IA y respuesta directa cuando la IA no contesta.
+export function motivosBloqueados(db, ronin, ahora = Date.now()) {
+  const c = conf();
+  const motivos = [];
+  if (ronin.era < c.desdeEra) return motivos;
+  const recursos = obtenerRecursos(db, ronin.id);
+  for (const t of tropasDeBando(ronin.bando)) {
+    const faltan = Object.entries(t.costo)
+      .filter(([r, n]) => (recursos[r] || 0) < n)
+      .map(([r, n]) => ({ recurso: r, faltan: n - (recursos[r] || 0), necesario: n }));
+    if (!faltan.length) continue;
+    const en = faltan.map((f) => `${f.faltan} more ${(reglas.recoleccion[f.recurso]?.etiqueta || f.recurso).toLowerCase()}`).join(' and ');
+    const es = faltan.map((f) => `${f.faltan} de ${f.recurso} más`).join(' y ');
+    motivos.push({
+      accion: 'entrenar',
+      parametros: { tropa: t.tipo },
+      objetivo: t.tipo,
+      en: `Train a ${t.etiqueta.toLowerCase()}: we need ${en}.`,
+      es: `Entrenar ${TROPA_ES[t.tipo] || t.tipo}: nos faltan ${es}.`,
+    });
+  }
+  for (const otro of otrosRonin(db, ronin)) {
+    const motivo = motivoNoAtacar(db, ronin, otro, ahora);
+    if (!motivo) continue;
+    motivos.push({
+      accion: 'atacar',
+      parametros: { clan: otro.id },
+      objetivo: otro.nombre,
+      en: `Attack ${otro.nombre}: ${motivo}`,
+      es: `Atacar a ${otro.nombre}: ${motivoNoAtacar(db, ronin, otro, ahora, 'es')}`,
+    });
+  }
+  if (aldeaBloqueada(db, ronin)) {
+    motivos.push({
+      accion: 'construir',
+      parametros: {},
+      objetivo: 'village',
+      en: 'Build the Era 2 village: we must raid another sanctuary first.',
+      es: 'Construir la aldea de la Era 2: primero tenemos que saquear otro santuario.',
+    });
+  }
+  return motivos;
 }
 
 // Los objetivos más cercanos en la isla van primero; el mapa del celular muestra a todos.
