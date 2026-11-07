@@ -38,7 +38,7 @@ export class EscenaSantuario extends Phaser.Scene {
     this.posicionesEdificios = {
       luz: {
         empalizada: { x: 95, y: y + 20, escala: 0.9, fondo: true },
-        casa: { x: 330, y, escala: 1.3 },
+        casa: { x: 290, y, escala: 1.3 },
         terrazas: { x: 680, y: atras, escala: 0.85, fondo: true },
         granero: { x: 930, y: atras, escala: 0.85, fondo: true },
         forja: { x: 1180, y: atras, escala: 0.85, fondo: true },
@@ -48,7 +48,7 @@ export class EscenaSantuario extends Phaser.Scene {
       },
       sombra: {
         muro: { x: 95, y: y + 20, escala: 0.9, fondo: true },
-        choza: { x: 330, y, escala: 1.3 },
+        choza: { x: 290, y, escala: 1.3 },
         huerto: { x: 680, y: atras, escala: 0.85, fondo: true },
         pozo: { x: 930, y: atras, escala: 0.85, fondo: true },
         caldero: { x: 1180, y: atras, escala: 0.85, fondo: true },
@@ -61,17 +61,17 @@ export class EscenaSantuario extends Phaser.Scene {
     // Cada aldeano trabaja en su edificio (granjero en las terrazas, herrero en
     // la forja); los guardias van al patio de armas, con las tropas.
     this.aldeanosPorEdificio = {
-      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 640, y: atras + 8, guardia: false },
+      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 640, y: atras + 8, guardia: false, flip: true, escala: 0.52 },
       forja: { tipo: 'luz-herrero', cuadros: 4, ritmo: 5, x: 1255, y: atras + 10, guardia: false },
       empalizada: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, guardia: true },
       torre: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, guardia: true },
-      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 640, y: atras + 8, guardia: false },
+      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 640, y: atras + 8, guardia: false, flip: true, escala: 0.52 },
       caldero: { tipo: 'sombra-alquimista', cuadros: 4, ritmo: 5, x: 1255, y: atras + 10, guardia: false },
       muro: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
       farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
     };
     // El patio de armas: filas de a 5 a la derecha del claro, frente al torii.
-    this.patio = { x: 1330, y, paso: 54, porFila: 5, filaAlto: 22 };
+    this.patio = { x: 1440, y, paso: 52, porFila: 5, filaAlto: 22 };
     this.escalaRonin = 0.72;
     this.escalaAldeano = 0.62;
     this.escalaTropa = 0.6;
@@ -210,8 +210,7 @@ export class EscenaSantuario extends Phaser.Scene {
       sprite.y = y;
       sprite.anims?.stop();
       if (sprite.texturaQuieta) sprite.setTexture(sprite.texturaQuieta);
-      // Solo el primero de cada fila ronda un poco; el resto monta guardia.
-      if (columna === 0) this.pasear(sprite, x, 60);
+      // Montan guardia quietos, mirando al camino.
     });
   }
 
@@ -328,8 +327,9 @@ export class EscenaSantuario extends Phaser.Scene {
     }
     const sprite = this.add.sprite(info.x || 0, info.y || this.suelo, `aldeano_${info.tipo}_0`);
     sprite.setOrigin(0.5, 1);
-    sprite.setScale(this.escalaAldeano);
-    sprite.setDepth(info.guardia ? 8 : 6);
+    sprite.setScale(info.escala || this.escalaAldeano);
+    sprite.setDepth(info.guardia ? 8 : 4.5);
+    if (info.flip) sprite.setFlipX(true);
     sprite.esGuardia = Boolean(info.guardia);
     sprite.texturaQuieta = `aldeano_${info.tipo}_0`;
     sprite.animacionPaso = animacion;
