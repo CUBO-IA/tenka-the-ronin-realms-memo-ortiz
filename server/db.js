@@ -15,6 +15,7 @@ export function abrirDb(ruta = process.env.RUTA_DB || path.join(RAIZ, 'tenka.db'
   if (ruta !== ':memory:') db.pragma('journal_mode = WAL');
 
   crearEsquema(db);
+  migrar(db);
   return db;
 }
 
