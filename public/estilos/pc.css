@@ -157,11 +157,10 @@
 /* --- Inicio --- */
 
 .panel-inicio {
+  /* A la derecha, sobre la nieve: el rōnin queda entero a la vista. */
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: clamp(0.9rem, 2vh, 2rem);
-  margin-inline: auto;
+  right: clamp(1.5rem, 6vw, 6rem);
+  bottom: clamp(1rem, 3vh, 2.4rem);
   width: min(330px, 90vw);
   --marco-madera: 22px;
   padding: 0.8rem clamp(0.8rem, 2vw, 1.1rem) 0.65rem;
@@ -541,10 +540,10 @@
 
 .creditos {
   position: fixed;
-  right: clamp(1rem, 2.4vw, 2.2rem);
-  bottom: 1.1rem;
+  left: clamp(1rem, 2.4vw, 2.2rem);
+  top: 0.9rem;
   z-index: 3;
-  text-align: right;
+  text-align: left;
   font-size: clamp(0.68rem, 0.85vw, 0.78rem);
   line-height: 1.5;
   letter-spacing: 0.01em;
@@ -634,10 +633,18 @@
   }
 
   .creditos {
+    top: auto;
+    bottom: 0.9rem;
     right: 0;
     left: 0;
     text-align: center;
     font-size: 0.66rem;
+  }
+
+  .panel-inicio {
+    right: 0;
+    left: 0;
+    margin-inline: auto;
   }
 
   .pagina-pc[data-vista="inicio"] .pie-sesion {
@@ -648,24 +655,6 @@
 @media (max-height: 900px) {
   .panel-inicio .nota {
     display: none;
-  }
-}
-
-/* Pantallas bajas (laptops): no hay lugar bajo el rōnin, el panel va a la derecha. */
-@media (max-height: 849px) and (min-width: 761px) {
-  .panel-inicio {
-    left: auto;
-    right: clamp(1.5rem, 6vw, 6rem);
-    bottom: 1rem;
-    margin-inline: 0;
-  }
-
-  .creditos {
-    top: 0.9rem;
-    bottom: auto;
-    right: auto;
-    left: clamp(1rem, 2.4vw, 2.2rem);
-    text-align: left;
   }
 }
 
@@ -686,7 +675,7 @@
   }
 
   .panel-inicio {
-    bottom: 1.2rem;
+    bottom: 1rem;
     padding-top: 0.75rem;
     padding-bottom: 0.6rem;
   }
