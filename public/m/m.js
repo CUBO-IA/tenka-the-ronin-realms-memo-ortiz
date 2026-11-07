@@ -305,12 +305,24 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && noLeidos > 0 && roninActual) marcarLeidos();
 });
 
-async function api(ruta, opcionesPeticion = {}) {
-  const respuesta = await fetch(ruta, {
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    ...opcionesPeticion,
-  });
+async function api(ruta, opcionesPeticion = {}, reintento = true) {
+  let respuesta;
+  try {
+    respuesta = await fetch(ruta, {
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      ...opcionesPeticion,
+    });
+  } catch (error) {
+    // Sin red o servidor reiniciando: un segundo intento antes de rendirse.
+    if (reintento) {
+      await new Promise((resolver) => setTimeout(resolver, 1500));
+      return api(ruta, opcionesPeticion, false);
+    }
+    const falla = new Error('The wind took your words, master. The sanctuary did not answer; try again.');
+    falla.estado = 0;
+    throw falla;
+  }
 
   let datos = {};
   try {
