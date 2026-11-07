@@ -1,6 +1,8 @@
 // Pantalla del celular: elegir el camino y despertar al rōnin.
 // Nada de esto decide el juego: el servidor valida cada opción.
 
+import { aplicarKamon, cargarPiezas, piezaDeTocado, pintarRonin } from '/recolorear.js';
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -30,21 +32,7 @@ const estado = {
 
 let opciones = null;
 let enviando = false;
-
-const ICONOS_TOCADO = {
-  sombrero_paja: `
-    <svg viewBox="0 0 48 36" aria-hidden="true">
-      <path d="M15 15Q24 3 33 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <path d="M4 17Q24 9 44 17Q45 21 39 22Q24 16 9 22Q3 21 4 17Z" fill="currentColor"/>
-      <path d="M15 16Q24 12 33 16" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
-    </svg>`,
-  mono: `
-    <svg viewBox="0 0 48 36" aria-hidden="true">
-      <path d="M10 34q2-12 14-12t14 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="24" cy="15" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
-      <path d="M19 8q5-5 10 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
-};
+let tokenPreview = 0;
 
 async function api(ruta, opcionesPeticion = {}) {
   const respuesta = await fetch(ruta, {
@@ -105,6 +93,7 @@ function elegirBando(id) {
 
   document.body.dataset.bando = id;
   renderKimonos();
+  renderTocados();
   actualizarPreview();
 }
 
@@ -165,7 +154,18 @@ function renderTocados() {
     boton.setAttribute('aria-pressed', String(tocado.id === estado.tocado));
     boton.setAttribute('aria-label', tocado.etiqueta);
     boton.title = tocado.etiqueta;
-    boton.innerHTML = ICONOS_TOCADO[tocado.id] || `<span>${tocado.etiqueta}</span>`;
+
+    const pieza = piezaDeTocado(tocado.id);
+    const imagen = document.createElement('img');
+    imagen.src = `/assets/tocado-${pieza}-${estado.bando}.png`;
+    imagen.alt = '';
+    boton.append(imagen);
+
+    const texto = document.createElement('span');
+    texto.className = 'solo-lectores';
+    texto.textContent = tocado.etiqueta;
+    boton.append(texto);
+
     boton.addEventListener('click', () => {
       estado.tocado = tocado.id;
       renderTocados();
@@ -186,11 +186,17 @@ function renderKamon() {
     boton.setAttribute('aria-pressed', String(kamon.id === estado.kamon));
     boton.setAttribute('aria-label', kamon.etiqueta);
     boton.title = kamon.etiqueta;
-    boton.innerHTML = `
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <use href="/arte/kamon.svg#kamon-${kamon.id}"></use>
-      </svg>
-      <span class="solo-lectores">${kamon.etiqueta}</span>`;
+
+    const icono = document.createElement('span');
+    icono.className = 'kamon-icono';
+    aplicarKamon(icono, kamon.id);
+    boton.append(icono);
+
+    const texto = document.createElement('span');
+    texto.className = 'solo-lectores';
+    texto.textContent = kamon.etiqueta;
+    boton.append(texto);
+
     boton.addEventListener('click', () => {
       estado.kamon = kamon.id;
       renderKamon();
@@ -200,22 +206,28 @@ function renderKamon() {
   }
 }
 
-function actualizarPreview() {
+async function actualizarPreview() {
   const bando = bandoActual();
   const kimono = kimonoActual();
   const faja = fajaActual();
   if (!bando) return;
 
   preview.dataset.bando = estado.bando;
+  document.body.dataset.bando = estado.bando;
   if (kimono) preview.style.setProperty('--kimono', kimono.color);
   if (faja) preview.style.setProperty('--faja', faja.color);
 
-  $('#preview-kamon').setAttribute('href', `/arte/kamon.svg#kamon-${estado.kamon}`);
-  $('#grupo-sombrero').classList.toggle('oculto', estado.tocado !== 'sombrero_paja');
-  $('#grupo-mono').classList.toggle('oculto', estado.tocado !== 'mono');
-
+  aplicarKamon($('#preview-kamon'), estado.kamon);
   lemaBando.textContent = bando.lema;
-  document.body.dataset.bando = estado.bando;
+
+  const token = ++tokenPreview;
+  try {
+    const dibujo = await cargarPiezas(estado.bando, estado.tocado);
+    if (token !== tokenPreview) return;
+    pintarRonin($('#ronin-lienzo'), dibujo, kimono?.color, faja?.color);
+  } catch {
+    // Si el sprite no llega, se queda el dibujo anterior.
+  }
 }
 
 function iniciarFormulario(datos) {
@@ -251,7 +263,7 @@ function iniciarFormulario(datos) {
   mostrarVista('form-ronin');
 }
 
-function mostrarDespierto(ronin, recienCreado) {
+async function mostrarDespierto(ronin, recienCreado) {
   opciones = opciones || { bandos: [], fajas: [] };
 
   const bando = opciones.bandos.find((elemento) => elemento.id === ronin.bando);
@@ -265,7 +277,7 @@ function mostrarDespierto(ronin, recienCreado) {
   $('#despierto-detalle').textContent = recienCreado
     ? `The ${ronin.bandoEtiqueta} path is chosen. Return to the computer to watch him arrive.`
     : 'Your rōnin has already awakened. Return to the computer to watch him.';
-  $('#despierto-kamon').setAttribute('href', `/arte/kamon.svg#kamon-${ronin.kamon}`);
+  aplicarKamon($('#despierto-kamon'), ronin.kamon);
 
   $('#despierto-kimono-color').style.background = kimono?.color || '#888';
   $('#despierto-kimono').textContent = kimono?.etiqueta || ronin.kimono;
@@ -275,6 +287,13 @@ function mostrarDespierto(ronin, recienCreado) {
 
   mostrarVista('estado-despierto');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  try {
+    const dibujo = await cargarPiezas(ronin.bando, ronin.tocado);
+    pintarRonin($('#despierto-lienzo'), dibujo, kimono?.color, faja?.color);
+  } catch {
+    // La tarjeta sigue mostrando el resto aunque falte el sprite.
+  }
 }
 
 formRonin.addEventListener('submit', async (evento) => {

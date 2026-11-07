@@ -1,13 +1,22 @@
 // Service worker mínimo para que la web móvil se pueda instalar.
 // Nunca cachea la API ni el socket: el servidor siempre manda.
 
-const CACHE = 'tenka-movil-v1';
+const CACHE = 'tenka-movil-v2';
 const CAPARAZON = [
   '/m',
   '/m/m.css',
   '/m/m.js',
+  '/recolorear.js',
   '/estilos/tenka.css',
-  '/arte/kamon.svg',
+  '/assets/fondo-movil-luz.jpg',
+  '/assets/fondo-movil-sombra.jpg',
+  '/assets/tarjeta-luz.jpg',
+  '/assets/tarjeta-sombra.jpg',
+  '/assets/logo-kanji.png',
+  '/assets/logo-kanji-claro.png',
+  '/assets/panel-madera.png',
+  '/assets/tira-papel.png',
+  '/assets/boton-laca.png',
   '/arte/icono.svg',
   '/m/manifest.webmanifest',
 ];
