@@ -616,14 +616,14 @@ function conectarSocketMovil() {
     if (!datos?.era) return;
     const nombre = datos.nombre || roninActual?.nombre || 'Your rōnin';
     $('#era-antetitulo').textContent = `Era ${datos.era - 1} complete`;
-    $('#era-titulo').textContent = datos.era >= 3 ? 'The village is whole' : 'Well done, Master';
+    $('#era-titulo').textContent = datos.era >= 3 ? 'Era 2 complete, Master' : 'Well done, Master';
     $('#era-detalle').textContent =
       datos.era >= 3
-        ? `${nombre} has raised the whole village. Era 3 begins: a fortress with a name the island will remember.`
+        ? `${nombre} has raised the whole village. This is where the story pauses for now.`
         : `${nombre} lit the altar flame. The mist lifts: the island can see your sanctuary now.`;
     $('#era-extra').textContent =
       datos.era >= 3
-        ? 'Keep your walls high and your allies close.'
+        ? 'Era 3 is coming: unite the clans, trade at the Crossroads Market and raise your fortress. Until then, defend what you built and keep your allies close.'
         : 'Era 2 opens the village: train troops, raise the terraces, forge and walls, offer alliances, and raid other sanctuaries for resources.';
     $('#tarjeta-era').classList.remove('oculto');
     avisarMensajeNuevo();

@@ -192,7 +192,7 @@ export function mensajePredefinido(db, ronin, momento, tarea = null) {
     const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
     const texto =
       ronin.era >= 3
-        ? `Master, the village is whole. Era ${ronin.era} begins: our sanctuary is a fortress now, and the island will remember our name. — ${inicial}.`
+        ? `Master, the village is whole: Era 2 is complete. Here our story pauses. Era 3 will bring the market, the pacts between clans and the fortress; until then, I will guard what we built. — ${inicial}.`
         : ronin.bando === 'sombra'
           ? `Master, the dark flame burns and the mist lifts: Era 2. The island can see us now, and we can see them. From here, wealth is taken: raid another sanctuary and we keep part of what they hold. I can train oni and kitsune, raise the grove, the cauldron, the thorn wall and the lantern, or offer a red thread of alliance to another clan. Choose our first move. — ${inicial}.`
           : `Master, the altar flame is lit and the fog lifts: Era 2. The island can see us now, and we can see them. From here, wealth is earned by the blade: raid another sanctuary and we keep part of what they hold. I can train samurai and archers, raise the terraces, the forge, the palisade and the watchtower, or offer a red thread of alliance to another clan. Choose our first move. — ${inicial}.`;
