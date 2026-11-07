@@ -59,7 +59,7 @@
 
 .pagina-pc[data-vista="inicio"] .escenario {
   justify-content: flex-start;
-  padding-top: clamp(1.6rem, 7vh, 4.5rem);
+  padding-top: calc(clamp(1.6rem, 7vh, 4.5rem) + 100px);
   padding-bottom: clamp(3rem, 9vh, 6.5rem);
 }
 
