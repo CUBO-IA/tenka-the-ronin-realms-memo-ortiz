@@ -2,6 +2,9 @@
 // Muestra el mundo en tiempo real: fondo, rōnin animado con recoloreo,
 // edificios por etapa y efectos ambientales (nieve o niebla).
 
+// Cuadros de ataque por tipo de tropa (el samurái solo tiene marcha).
+const CUADROS_DE_ATAQUE = { arquero: 3, oni: 3, kitsune: 3, samurai: 0 };
+
 import { piezaDeTocado } from '/recolorear.js';
 
 export class EscenaSantuario extends Phaser.Scene {
@@ -92,10 +95,13 @@ export class EscenaSantuario extends Phaser.Scene {
         ? ['casa', 'granero', 'torii', 'altar', 'terrazas', 'forja', 'empalizada', 'torre']
         : ['choza', 'pozo', 'circulo', 'altar', 'huerto', 'caldero', 'muro', 'farol'];
 
-    // Tropas del bando (4 cuadros de marcha)
+    // Tropas del bando (4 cuadros de marcha y, si los hay, 3 de ataque)
     for (const tipo of this.tiposTropa) {
       for (let i = 0; i < 4; i += 1) {
         if (!this.textures.exists(`tropa_${tipo}_${i}`)) this.load.image(`tropa_${tipo}_${i}`, `/assets/tropa-${tipo}-caminar-${i}.png`);
+      }
+      for (let i = 0; i < (CUADROS_DE_ATAQUE[tipo] || 0); i += 1) {
+        if (!this.textures.exists(`tropa_${tipo}_atacar_${i}`)) this.load.image(`tropa_${tipo}_atacar_${i}`, `/assets/tropa-${tipo}-atacar-${i}.png`);
       }
     }
 
@@ -189,6 +195,7 @@ export class EscenaSantuario extends Phaser.Scene {
         sprite.setScale(this.escalaTropa);
         sprite.texturaQuieta = `tropa_${tipo}_0`;
         sprite.animacionPaso = animacion;
+        sprite.tipoTropa = tipo;
         this.tropasSprites.push(sprite);
       }
     }
@@ -638,7 +645,7 @@ export class EscenaSantuario extends Phaser.Scene {
 
   // ---------- Pelea en este santuario ----------
 
-  // Llega un atacante por el costado izquierdo y se traba con el rōnin.
+  // Llega un atacante por el portal (la derecha) y se traba con el rōnin.
   mostrarAtaque(atacante) {
     if (!atacante || !this.roninSprite) return;
     this.terminarAtaque();
@@ -666,36 +673,40 @@ export class EscenaSantuario extends Phaser.Scene {
       }
     }
 
-    this.atacanteSprite = this.add.sprite(-150, this.sueloRonin, clave('idle-0'));
+    this.atacanteSprite = this.add.sprite(2080, this.sueloRonin, clave('idle-0'));
     this.atacanteSprite.setOrigin(0.5, 1);
     this.atacanteSprite.setScale(this.escalaRonin);
     this.atacanteSprite.setDepth(11);
+    this.atacanteSprite.setFlipX(true);
     this.atacanteSprite.play(`atacante_${variacion}_walk`);
     this.variacionAtacante = variacion;
 
-    // Las tropas del atacante entran en columna detrás de él.
+    // Las tropas del atacante entran por el portal en columna detrás de él,
+    // de frente al santuario, nunca por la espalda.
     this.tropasAtacante = [];
     const tiposAtacante = atacante.bando === 'luz' ? ['samurai', 'arquero'] : ['oni', 'kitsune'];
     let puesto = 0;
     for (const tipo of tiposAtacante) {
       const cantidad = Math.min(4, atacante.tropas?.[tipo] || 0);
       for (let i = 0; i < cantidad && puesto < 6; i += 1) {
-        const sprite = this.add.sprite(-260 - puesto * 60, this.suelo - 4 + (puesto % 2) * 8, `tropa_${tipo}_0`);
+        const sprite = this.add.sprite(2200 + puesto * 60, this.suelo - 4 + (puesto % 2) * 8, `tropa_${tipo}_0`);
         sprite.setOrigin(0.5, 1);
         sprite.setScale(this.escalaTropa);
         sprite.setDepth(10);
+        sprite.setFlipX(true);
+        sprite.tipoTropa = tipo;
         this.cargarYAnimarTropa(sprite, tipo);
         this.tropasAtacante.push(sprite);
-        this.tweens.add({ targets: sprite, x: 700 - puesto * 60, duration: 1800 + puesto * 120, ease: 'Linear', onComplete: () => sprite.active && sprite.anims.stop() });
+        this.tweens.add({ targets: sprite, x: 1250 + puesto * 60, duration: 1800 + puesto * 120, ease: 'Linear', onComplete: () => sprite.active && sprite.anims.stop() });
         puesto += 1;
       }
     }
 
-    // Las tropas del defensor se forman delante de su rōnin.
+    // Las tropas del defensor se forman detrás de su rōnin, mirando al portal.
     this.tropasSprites.forEach((sprite, i) => {
       this.tweens.killTweensOf(sprite);
-      sprite.setFlipX(true);
-      this.tweens.add({ targets: sprite, x: 1120 + i * 48, y: this.suelo - 4 + (i % 2) * 8, duration: 900, onComplete: () => sprite.active && sprite.anims.stop() });
+      sprite.setFlipX(false);
+      this.tweens.add({ targets: sprite, x: 820 - i * 48, y: this.suelo - 4 + (i % 2) * 8, duration: 900, onComplete: () => sprite.active && sprite.anims.stop() });
     });
 
     const cartel = this.add.text(960, 120, `${atacante.nombre} attacks the sanctuary!`, {
@@ -712,14 +723,14 @@ export class EscenaSantuario extends Phaser.Scene {
     // El defensor sale a recibirlo.
     this.tweens.killTweensOf(this.roninSprite);
     this.tweens.killTweensOf(this.sombraSprite);
-    this.roninSprite.setFlipX(true);
+    this.roninSprite.setFlipX(false);
     this.roninSprite.play(`${this.prefijo}walk`);
-    this.tweens.add({ targets: [this.roninSprite], x: 1010, duration: 900 });
-    this.tweens.add({ targets: [this.sombraSprite], x: 1010, duration: 900 });
+    this.tweens.add({ targets: [this.roninSprite], x: 930, duration: 900 });
+    this.tweens.add({ targets: [this.sombraSprite], x: 930, duration: 900 });
 
     this.tweens.add({
       targets: this.atacanteSprite,
-      x: 880,
+      x: 1070,
       duration: 1800,
       ease: 'Linear',
       onComplete: () => {
@@ -748,8 +759,26 @@ export class EscenaSantuario extends Phaser.Scene {
       return;
     }
     for (let i = 0; i < 4; i += 1) this.load.image(`tropa_${tipo}_${i}`, `/assets/tropa-${tipo}-caminar-${i}.png`);
+    for (let i = 0; i < (CUADROS_DE_ATAQUE[tipo] || 0); i += 1) {
+      this.load.image(`tropa_${tipo}_atacar_${i}`, `/assets/tropa-${tipo}-atacar-${i}.png`);
+    }
     this.load.once('complete', listo);
     this.load.start();
+  }
+
+  // Una tropa saca su arma: su animación de ataque una vez y vuelve a la guardia.
+  golpeDeTropa(sprite) {
+    const tipo = sprite.tipoTropa;
+    const cuadros = CUADROS_DE_ATAQUE[tipo] || 0;
+    if (!cuadros || !this.textures.exists(`tropa_${tipo}_atacar_0`)) return;
+    const animacion = `tropa_${tipo}_atacar`;
+    if (!this.anims.exists(animacion)) {
+      const lista = [];
+      for (let i = 0; i < cuadros; i += 1) lista.push({ key: `tropa_${tipo}_atacar_${i}` });
+      this.anims.create({ key: animacion, frames: lista, frameRate: 9, repeat: 0 });
+    }
+    sprite.play(animacion);
+    sprite.once('animationcomplete', () => sprite.active && sprite.setTexture(`tropa_${tipo}_0`));
   }
 
   // El combate golpe a golpe que decidió el servidor: barras de vida sobre los
@@ -805,13 +834,16 @@ export class EscenaSantuario extends Phaser.Scene {
     const golpeados = pegaAtacante
       ? [this.roninSprite, ...this.tropasSprites]
       : [this.atacanteSprite, ...(this.tropasAtacante || [])];
-    const sentido = pegaAtacante ? 1 : -1;
+    // El atacante pelea desde el portal (derecha): embiste hacia la izquierda.
+    const sentido = pegaAtacante ? -1 : 1;
 
     for (const sprite of golpeadores) {
       if (!sprite?.active) continue;
-      // Embestida corta hacia el enemigo y vuelta.
+      // Embestida corta hacia el enemigo y vuelta, con el arma afuera.
       this.tweens.add({ targets: sprite, x: sprite.x + 34 * sentido, duration: 110, yoyo: true, ease: 'Quad.easeOut' });
+      if (sprite.tipoTropa) this.golpeDeTropa(sprite);
     }
+    this.golpeDeRonin(pegaAtacante ? this.atacanteSprite : this.roninSprite, pegaAtacante);
     for (const sprite of golpeados) {
       if (!sprite?.active) continue;
       sprite.setTint(0xffffff);
@@ -825,6 +857,24 @@ export class EscenaSantuario extends Phaser.Scene {
     }
     this.cameras.main.shake(120, 0.0025);
     this.dibujarBarras();
+  }
+
+  // El rōnin descarga un tajo (los cuadros de leñador sirven de golpe) y
+  // vuelve a la guardia.
+  golpeDeRonin(sprite, esAtacante) {
+    if (!sprite?.active) return;
+    const animacion = esAtacante ? `atacante_${this.variacionAtacante}_chop` : `${this.prefijo}chop`;
+    if (!this.anims.exists(animacion)) return;
+    sprite.play({ key: animacion, repeat: 0, frameRate: 14 });
+    sprite.once('animationcomplete', () => {
+      if (!sprite.active) return;
+      if (esAtacante) {
+        sprite.anims.stop();
+        sprite.setTexture(`atacante_${this.variacionAtacante}_idle-0`);
+      } else {
+        sprite.play(`${this.prefijo}idle`);
+      }
+    });
   }
 
   quitarBarras() {
@@ -848,7 +898,7 @@ export class EscenaSantuario extends Phaser.Scene {
     for (const perdedor of perdedores) {
       if (!perdedor?.active) continue;
       perdedor.setTint(0x663333);
-      this.tweens.add({ targets: perdedor, alpha: 0.25, angle: ganaAtacante ? -80 : 80, duration: 700 });
+      this.tweens.add({ targets: perdedor, alpha: 0.25, angle: ganaAtacante ? 80 : -80, duration: 700 });
     }
     if (this.cartelAtaque) {
       this.cartelAtaque.setText(ganaAtacante ? `${resultado.atacante?.nombre || 'The attacker'} breaks the gate` : 'The sanctuary holds!');

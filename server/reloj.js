@@ -163,6 +163,10 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
     const roninActualizado = serializarRonin(roninFila);
     const recursosActualizados = obtenerRecursos(db, ronin.id);
 
+    // El rōnin ya está libre: que su pantalla lo sepa antes de que la IA
+    // termine de escribir el parte (puede tardar varios segundos).
+    if (io && batalla) io.to(`usuario:${ronin.usuario_id}`).emit('ronin:actualizado', { ronin: roninActualizado });
+
     // El rōnin le habla al maestro: con IA si responde, predefinido si no.
     let nuevoMensaje;
     if (batalla) {
