@@ -261,30 +261,67 @@ export class EscenaSantuario extends Phaser.Scene {
         frequency: 180,
       }).setDepth(15);
     } else {
-      // Niebla violeta flotando en el pantano
-      const lienzoNiebla = document.createElement('canvas');
-      lienzoNiebla.width = 64;
-      lienzoNiebla.height = 32;
-      const ctx = lienzoNiebla.getContext('2d');
-      const grad = ctx.createRadialGradient(32, 16, 2, 32, 16, 30);
-      grad.addColorStop(0, 'rgba(160, 110, 210, 0.22)');
-      grad.addColorStop(1, 'rgba(160, 110, 210, 0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 64, 32);
-      if (!this.textures.exists('particula_niebla')) this.textures.addCanvas('particula_niebla', lienzoNiebla);
+      // Niebla que se desplaza por el pantano: una banda ancha y suave,
+      // repetida en dos capas que avanzan a distinta velocidad. Es tenue a
+      // propósito: tiene que sentirse, no tapar a nadie.
+      if (!this.textures.exists('banda_niebla')) {
+        const lienzo = document.createElement('canvas');
+        lienzo.width = 1024;
+        lienzo.height = 160;
+        const ctx = lienzo.getContext('2d');
+        // Manchas con posiciones fijas para que la banda se repita sin costura.
+        const manchas = [
+          [90, 95, 170], [300, 70, 210], [520, 105, 190], [700, 60, 230], [900, 90, 180],
+          [180, 130, 120], [430, 125, 140], [820, 135, 130], [1010, 80, 170],
+        ];
+        for (const [x, y, radio] of manchas) {
+          const grad = ctx.createRadialGradient(x, y, 0, x, y, radio);
+          grad.addColorStop(0, 'rgba(190, 160, 230, 0.16)');
+          grad.addColorStop(0.6, 'rgba(170, 130, 220, 0.06)');
+          grad.addColorStop(1, 'rgba(170, 130, 220, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+          // La misma mancha corrida un ancho entero, para cerrar la costura.
+          for (const dx of [-lienzo.width, lienzo.width]) {
+            const g2 = ctx.createRadialGradient(x + dx, y, 0, x + dx, y, radio);
+            g2.addColorStop(0, 'rgba(190, 160, 230, 0.16)');
+            g2.addColorStop(0.6, 'rgba(170, 130, 220, 0.06)');
+            g2.addColorStop(1, 'rgba(170, 130, 220, 0)');
+            ctx.fillStyle = g2;
+            ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+          }
+        }
+        this.textures.addCanvas('banda_niebla', lienzo);
+      }
 
-      this.add.particles(0, 800, 'particula_niebla', {
-        x: { min: 0, max: 1920 },
-        y: { min: 720, max: 960 },
-        lifespan: 12000,
-        speedX: { min: 10, max: 35 },
-        speedY: { min: -5, max: 5 },
-        scale: { min: 3, max: 6 },
-        alpha: { start: 0, end: 0.4, ease: 'Sine.easeInOut' },
-        quantity: 1,
-        frequency: 1200,
-      }).setDepth(15);
+      this.capasNiebla = [
+        // [y del centro, velocidad px/s, alfa, escala vertical]
+        { y: 930, velocidad: 14, alfa: 0.55, escalaY: 1.15 },
+        { y: 990, velocidad: 26, alfa: 0.7, escalaY: 0.9 },
+      ].map((capa) => {
+        const banda = this.add.tileSprite(960, capa.y, 1920, 160, 'banda_niebla');
+        banda.setScale(1, capa.escalaY);
+        banda.setAlpha(capa.alfa);
+        banda.setBlendMode(Phaser.BlendModes.SCREEN);
+        banda.setDepth(15);
+        banda.tilePositionX = Math.random() * 1024;
+        // Respira: sube y baja la densidad muy despacio.
+        this.tweens.add({
+          targets: banda,
+          alpha: capa.alfa * 0.6,
+          duration: 7000 + Math.random() * 3000,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+        return { banda, velocidad: capa.velocidad };
+      });
     }
+  }
+
+  moverNiebla(delta) {
+    if (!this.capasNiebla) return;
+    for (const capa of this.capasNiebla) capa.banda.tilePositionX += (capa.velocidad * delta) / 1000;
   }
 
   crearEdificios() {
@@ -899,7 +936,8 @@ export class EscenaSantuario extends Phaser.Scene {
     }
   }
 
-  update() {
+  update(_tiempo, delta) {
+    this.moverNiebla(delta);
     this.ubicarGlobo();
     if (this.barras) this.dibujarBarras();
   }
