@@ -157,8 +157,8 @@ async function pedirSello() {
 function textoPieQr() {
   if (!usuario) return '';
   return ronin
-    ? `Signed in as ${usuario.nombre} · Your rōnin awaits his master`
-    : `Signed in as ${usuario.nombre} · Waiting for your rōnin to awaken`;
+    ? `Signed in as ${usuario.nombre} · Scan to command ${ronin.nombre} from your phone`
+    : `Signed in as ${usuario.nombre} · Scan to create your rōnin`;
 }
 
 function mostrarQr() {
@@ -466,6 +466,12 @@ btnEmparejar.addEventListener('click', () => {
 });
 
 async function iniciar() {
+  // Un celular que abre la raíz va a su propia pantalla: la computadora es la vista grande.
+  if (/iphone|ipad|ipod|android/i.test(navigator.userAgent) && !location.search.includes('pc')) {
+    location.replace('/m');
+    return;
+  }
+
   try {
     catalogo = await api('/api/opciones');
   } catch {
