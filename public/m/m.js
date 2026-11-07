@@ -793,7 +793,7 @@ function renderMensajeYComandos() {
     btn.textContent = op.etiqueta || op.accion;
     btn.addEventListener('click', async () => {
       for (const b of $$('.boton-opcion')) b.disabled = true;
-      agregarAlHilo({ id: Date.now() + 0.5, de: 'maestro', texto: op.etiqueta || op.accion, creado: Date.now() });
+      agregarAlHilo({ id: (hilo.at(-1)?.id || 0) + 0.5, de: 'maestro', texto: op.etiqueta || op.accion, creado: Date.now() });
       try {
         const respuesta = await api('/api/acciones', {
           method: 'POST',
@@ -809,7 +809,7 @@ function renderMensajeYComandos() {
           renderRecursos();
         }
       } catch (err) {
-        agregarAlHilo({ id: Date.now() + 0.7, de: 'ronin', texto: err.message || 'I could not do that, master.', creado: Date.now(), opciones: [], respondido: true });
+        agregarAlHilo({ id: (hilo.at(-1)?.id || 0) + 0.5, de: 'ronin', texto: err.message || 'I could not do that, master.', creado: Date.now(), opciones: [], respondido: true });
         actualizarEstadoTarea();
       }
     });
@@ -857,7 +857,7 @@ formOrdenLibre?.addEventListener('submit', async (e) => {
   const btn = $('#btn-enviar-orden');
   btn.disabled = true;
   respuestaOrdenLibre.classList.add('oculto');
-  agregarAlHilo({ id: Date.now() + 0.5, de: 'maestro', texto, creado: Date.now() });
+  agregarAlHilo({ id: (hilo.at(-1)?.id || 0) + 0.5, de: 'maestro', texto, creado: Date.now() });
   entradaOrdenLibre.value = '';
   mostrarPensando(true);
 
@@ -867,6 +867,10 @@ formOrdenLibre?.addEventListener('submit', async (e) => {
       body: JSON.stringify({ texto }),
     });
     mostrarPensando(false);
+    if (res.lineaMaestro) {
+      hilo = hilo.filter((m) => !(m.de === 'maestro' && m.texto === texto && !Number.isInteger(m.id)));
+      agregarAlHilo(res.lineaMaestro);
+    }
     // El rōnin contesta en el hilo; si fue una orden, el estado cambia.
     if (res.mensaje) {
       mensajeActual = res.mensaje;
@@ -890,7 +894,7 @@ formOrdenLibre?.addEventListener('submit', async (e) => {
     }
   } catch (err) {
     mostrarPensando(false);
-    agregarAlHilo({ id: Date.now() + 0.7, de: 'ronin', texto: err.message || 'The wind took your words, master. Say it again.', creado: Date.now(), opciones: [], respondido: true });
+    agregarAlHilo({ id: (hilo.at(-1)?.id || 0) + 0.5, de: 'ronin', texto: err.message || 'The wind took your words, master. Say it again.', creado: Date.now(), opciones: [], respondido: true });
   } finally {
     btn.disabled = false;
   }
