@@ -15,6 +15,8 @@ export class EscenaSantuario extends Phaser.Scene {
     this.bando = this.ronin.bando || 'luz';
     this.tocado = piezaDeTocado(this.ronin.tocado);
     this.claveVariacion = `${this.bando}-${this.tocado}`;
+    // Las texturas recoloreadas son de este rōnin: otro rōnin genera las suyas.
+    this.prefijo = `ronin_${this.ronin.id || 'x'}_`;
     this.edificios = this.datos.edificios || [];
     this.recursos = this.datos.recursos || {};
     this.kimonoColor = this.datos.kimonoColor || '#2b3a67';
@@ -123,7 +125,7 @@ export class EscenaSantuario extends Phaser.Scene {
       ctx.beginPath();
       ctx.arc(4, 4, 3, 0, Math.PI * 2);
       ctx.fill();
-      this.textures.addCanvas('particula_nieve', lienzoNieve);
+      if (!this.textures.exists('particula_nieve')) this.textures.addCanvas('particula_nieve', lienzoNieve);
 
       this.add.particles(0, -20, 'particula_nieve', {
         x: { min: 0, max: 1920 },
@@ -147,7 +149,7 @@ export class EscenaSantuario extends Phaser.Scene {
       grad.addColorStop(1, 'rgba(160, 110, 210, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 64, 32);
-      this.textures.addCanvas('particula_niebla', lienzoNiebla);
+      if (!this.textures.exists('particula_niebla')) this.textures.addCanvas('particula_niebla', lienzoNiebla);
 
       this.add.particles(0, 800, 'particula_niebla', {
         x: { min: 0, max: 1920 },
@@ -230,7 +232,7 @@ export class EscenaSantuario extends Phaser.Scene {
     for (const [anim, total] of Object.entries(this.conteoCuadros)) {
       for (let i = 0; i < total; i++) {
         const claveBase = `ronin-${this.claveVariacion}-${anim}-${i}`;
-        const claveTextura = `ronin_tex_${anim}_${i}`;
+        const claveTextura = `${this.prefijo}${anim}_${i}`;
 
         if (this.textures.exists(claveTextura)) continue;
 
@@ -314,12 +316,14 @@ export class EscenaSantuario extends Phaser.Scene {
     for (const [anim, total] of Object.entries(this.conteoCuadros)) {
       const fotogramas = [];
       for (let i = 0; i < total; i++) {
-        fotogramas.push({ key: `ronin_tex_${anim}_${i}` });
+        fotogramas.push({ key: `${this.prefijo}${anim}_${i}` });
       }
 
       const frameRate = anim === 'walk' ? 8 : anim === 'chop' ? 6 : 4;
+      const clave = `${this.prefijo}${anim}`;
+      if (this.anims.exists(clave)) this.anims.remove(clave);
       this.anims.create({
-        key: `ronin_${anim}`,
+        key: clave,
         frames: fotogramas,
         frameRate,
         repeat: -1,
@@ -338,18 +342,18 @@ export class EscenaSantuario extends Phaser.Scene {
     grad.addColorStop(1, 'rgba(10, 8, 14, 0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 120, 36);
-    this.textures.addCanvas('sombra_suelo', lienzoSombra);
+    if (!this.textures.exists('sombra_suelo')) this.textures.addCanvas('sombra_suelo', lienzoSombra);
 
     this.sombraSprite = this.add.image(960, this.suelo + 2, 'sombra_suelo');
     this.sombraSprite.setOrigin(0.5, 0.5);
     this.sombraSprite.setDepth(9);
 
     // Sprite animado del rōnin
-    this.roninSprite = this.add.sprite(960, this.suelo, 'ronin_tex_idle_0');
+    this.roninSprite = this.add.sprite(960, this.suelo, `${this.prefijo}idle_0`);
     this.roninSprite.setOrigin(0.5, 1);
     this.roninSprite.setScale(0.95);
     this.roninSprite.setDepth(10);
-    this.roninSprite.play('ronin_idle');
+    this.roninSprite.play(`${this.prefijo}idle`);
   }
 
   aplicarEstado(estado, tareaJson) {
@@ -369,7 +373,7 @@ export class EscenaSantuario extends Phaser.Scene {
       const targetY = this.suelo;
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(false);
-        this.roninSprite.play('ronin_chop');
+        this.roninSprite.play(`${this.prefijo}chop`);
       });
     } else if (estado === 'construyendo') {
       // Camina al sitio del edificio que se está construyendo
@@ -381,7 +385,19 @@ export class EscenaSantuario extends Phaser.Scene {
 
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(true);
-        this.roninSprite.play('ronin_chop');
+        this.roninSprite.play(`${this.prefijo}chop`);
+      });
+    } else if (estado === 'entrenando') {
+      // Entrena en el claro: golpes al aire frente al santuario.
+      this.moverRonin(1180, this.suelo, () => {
+        this.roninSprite.setFlipX(true);
+        this.roninSprite.play(`${this.prefijo}chop`);
+      });
+    } else if (estado === 'atacando') {
+      // Marcha: sale por la derecha del santuario hacia la isla.
+      this.ocultarGlobo();
+      this.moverRonin(2050, this.suelo, () => {
+        this.roninSprite.play(`${this.prefijo}idle`);
       });
     } else if (estado === 'descansando') {
       // Regresa a descansar junto a la casa / refugio
@@ -389,7 +405,7 @@ export class EscenaSantuario extends Phaser.Scene {
       const targetY = this.suelo;
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(false);
-        this.roninSprite.play('ronin_idle');
+        this.roninSprite.play(`${this.prefijo}idle`);
       });
     } else {
       // Estado despierto / ocioso en el claro central
@@ -397,8 +413,118 @@ export class EscenaSantuario extends Phaser.Scene {
       const targetY = this.suelo;
       this.moverRonin(targetX, targetY, () => {
         this.roninSprite.setFlipX(false);
-        this.roninSprite.play('ronin_idle');
+        this.roninSprite.play(`${this.prefijo}idle`);
       });
+    }
+  }
+
+  // ---------- Pelea en este santuario ----------
+
+  // Llega un atacante por el costado izquierdo y se traba con el rōnin.
+  mostrarAtaque(atacante) {
+    if (!atacante || !this.roninSprite) return;
+    this.terminarAtaque();
+    const variacion = `${atacante.bando}-${atacante.tocado === 'mono' ? 'mono' : 'sombrero'}`;
+    const claves = ['idle-0', 'walk-0', 'walk-1', 'walk-2', 'walk-3', 'chop-0', 'chop-1', 'chop-2', 'chop-3'];
+    for (const cuadro of claves) {
+      const clave = `atacante_${variacion}_${cuadro}`;
+      if (!this.textures.exists(clave)) this.load.image(clave, `/assets/ronin-${variacion}-${cuadro}.png`);
+    }
+    this.load.once('complete', () => this.entrarAtacante(atacante, variacion));
+    this.load.start();
+  }
+
+  entrarAtacante(atacante, variacion) {
+    const clave = (cuadro) => `atacante_${variacion}_${cuadro}`;
+    for (const [nombre, cuadros] of [['walk', ['walk-0', 'walk-1', 'walk-2', 'walk-3']], ['chop', ['chop-0', 'chop-1', 'chop-2', 'chop-3']]]) {
+      const animacion = `atacante_${variacion}_${nombre}`;
+      if (!this.anims.exists(animacion)) {
+        this.anims.create({
+          key: animacion,
+          frames: cuadros.map((c) => ({ key: clave(c) })),
+          frameRate: nombre === 'walk' ? 8 : 6,
+          repeat: -1,
+        });
+      }
+    }
+
+    this.atacanteSprite = this.add.sprite(-150, this.suelo, clave('idle-0'));
+    this.atacanteSprite.setOrigin(0.5, 1);
+    this.atacanteSprite.setScale(0.95);
+    this.atacanteSprite.setDepth(11);
+    this.atacanteSprite.play(`atacante_${variacion}_walk`);
+    this.variacionAtacante = variacion;
+
+    const cartel = this.add.text(960, 120, `${atacante.nombre} attacks the sanctuary!`, {
+      fontFamily: '"Iowan Old Style", Palatino, Georgia, serif',
+      fontSize: '40px',
+      color: '#fdfaf2',
+      stroke: '#6f1a18',
+      strokeThickness: 6,
+    });
+    cartel.setOrigin(0.5, 0.5);
+    cartel.setDepth(25);
+    this.cartelAtaque = cartel;
+
+    // El defensor sale a recibirlo.
+    this.tweens.killTweensOf(this.roninSprite);
+    this.tweens.killTweensOf(this.sombraSprite);
+    this.roninSprite.setFlipX(true);
+    this.roninSprite.play(`${this.prefijo}walk`);
+    this.tweens.add({ targets: [this.roninSprite], x: 1010, duration: 900 });
+    this.tweens.add({ targets: [this.sombraSprite], x: 1010, duration: 900 });
+
+    this.tweens.add({
+      targets: this.atacanteSprite,
+      x: 880,
+      duration: 1800,
+      ease: 'Linear',
+      onComplete: () => {
+        if (!this.atacanteSprite) return;
+        this.atacanteSprite.play(`atacante_${variacion}_chop`);
+        this.roninSprite.play(`${this.prefijo}chop`);
+        this.cameras.main.shake(400, 0.004);
+      },
+    });
+  }
+
+  // Resultado: el perdedor cae y se desvanece; el ganador queda en pie.
+  resolverAtaque(resultado) {
+    if (!this.roninSprite) return;
+    const ganaAtacante = resultado?.ganador === 'atacante';
+    const perdedor = ganaAtacante ? this.roninSprite : this.atacanteSprite;
+    const ganador = ganaAtacante ? this.atacanteSprite : this.roninSprite;
+
+    this.cameras.main.flash(300, 255, 240, 220);
+    if (ganador?.anims) ganador.play(ganador === this.roninSprite ? `${this.prefijo}idle` : `atacante_${this.variacionAtacante}_walk`);
+    if (perdedor) {
+      perdedor.setTint(0x663333);
+      this.tweens.add({ targets: perdedor, alpha: 0.25, angle: ganaAtacante ? -80 : 80, duration: 700 });
+    }
+    if (this.cartelAtaque) {
+      this.cartelAtaque.setText(ganaAtacante ? `${resultado.atacante?.nombre || 'The attacker'} breaks the gate` : 'The sanctuary holds!');
+    }
+
+    this.time.delayedCall(3500, () => {
+      // Todo vuelve a su lugar: el daño real ya lo mandó el servidor.
+      this.terminarAtaque();
+      if (this.roninSprite) {
+        this.roninSprite.clearTint();
+        this.roninSprite.setAlpha(1);
+        this.roninSprite.setAngle(0);
+        this.aplicarEstado(this.ronin.estado, this.ronin.tarea);
+      }
+    });
+  }
+
+  terminarAtaque() {
+    if (this.atacanteSprite) {
+      this.atacanteSprite.destroy();
+      this.atacanteSprite = null;
+    }
+    if (this.cartelAtaque) {
+      this.cartelAtaque.destroy();
+      this.cartelAtaque = null;
     }
   }
 
@@ -476,7 +602,7 @@ export class EscenaSantuario extends Phaser.Scene {
 
     // Mirar hacia la dirección de movimiento
     this.roninSprite.setFlipX(targetX < this.roninSprite.x);
-    this.roninSprite.play('ronin_walk');
+    this.roninSprite.play(`${this.prefijo}walk`);
 
     const distancia = Phaser.Math.Distance.Between(
       this.roninSprite.x,

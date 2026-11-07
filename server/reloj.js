@@ -2,6 +2,8 @@ import { edificioPorTipo, obtenerRecursos } from './acciones.js';
 import { mensajeDelRonin } from './agente.js';
 import { enviarPush } from './push.js';
 import { resumenPorId } from './mundo.js';
+import { resolverBatalla, sumarTropa, textosDeBatalla } from './conflicto.js';
+import { guardarMensaje, obtenerEdificios } from './acciones.js';
 import { reglas } from './reglas.js';
 import { serializarRonin } from './ronin.js';
 
@@ -28,6 +30,8 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
     }
 
     let edificioActualizado = null;
+    let batalla = null;
+    let nuevaEra = false;
 
     const resolver = db.transaction(() => {
       // 1. Aplicar resultado de la tarea
@@ -50,7 +54,19 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
           edificioActualizado = db
             .prepare('SELECT id, tipo, etapa, progreso FROM edificios WHERE id = ?')
             .get(ed.id);
+
+          // Con los cuatro edificios de la era 1 terminados, se enciende la
+          // llama: era 2, y la niebla se levanta en el mapa.
+          if (ronin.era === 1) {
+            const terminados = obtenerEdificios(db, ronin.id).filter((e) => e.etapa === 'terminado').length;
+            if (terminados >= 4) {
+              db.prepare('UPDATE ronin SET era = 2 WHERE id = ?').run(ronin.id);
+              nuevaEra = true;
+            }
+          }
         }
+      } else if (tarea.accion === 'entrenar') {
+        sumarTropa(db, ronin.id, tarea.parametros?.tropa, tarea.parametros?.cantidad || 1);
       }
 
       // 2. Liberar al rōnin
@@ -61,11 +77,42 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
 
     resolver();
 
+    // La marcha llegó: se pelea en el santuario del defensor. El resultado
+    // sale a las pantallas de inmediato; los mensajes con IA vienen después.
+    if (tarea.accion === 'atacar') {
+      batalla = resolverBatalla(db, ronin, tarea.parametros?.clan, ahora);
+      if (batalla && io && typeof io.emit === 'function') io.emit('batalla:resultado', batalla);
+    }
+
     const roninFila = db.prepare('SELECT * FROM ronin WHERE id = ?').get(ronin.id);
     const roninActualizado = serializarRonin(roninFila);
     const recursosActualizados = obtenerRecursos(db, ronin.id);
+
     // El rōnin le habla al maestro: con IA si responde, predefinido si no.
-    const nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'fin_tarea', tarea);
+    let nuevoMensaje;
+    if (batalla) {
+      const textos = textosDeBatalla(batalla);
+      nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'fin_batalla', tarea, { batalla: textos.atacante });
+      const mensajeDefensor = guardarMensaje(db, batalla.defensor.id, textos.defensor, []);
+      if (io) {
+        const salaDefensor = `usuario:${batalla.usuarioDefensor}`;
+        io.to(salaDefensor).emit('mensaje:nuevo', { mensaje: mensajeDefensor });
+        io.to(salaDefensor).emit('recursos:actualizados', { recursos: obtenerRecursos(db, batalla.defensor.id) });
+        io.to(salaDefensor).emit('edificios:actualizados', { edificios: obtenerEdificios(db, batalla.defensor.id) });
+        io.to(salaDefensor).emit('ronin:actualizado', { ronin: batalla.defensor });
+        if (typeof io.emit === 'function') io.emit('mundo:ronin', { ronin: resumenPorId(db, batalla.defensor.id) });
+      }
+      enviarPush(db, batalla.usuarioDefensor, {
+        titulo: `${batalla.defensor.nombre} speaks`,
+        cuerpo: textos.defensor,
+        url: '/m',
+        tag: `ronin-${batalla.defensor.id}`,
+      }).catch(() => {});
+    } else if (nuevaEra) {
+      nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'nueva_era', tarea);
+    } else {
+      nuevoMensaje = await mensajeDelRonin(db, roninActualizado, 'fin_tarea', tarea);
+    }
 
     const resultado = {
       ronin: roninActualizado,
@@ -73,6 +120,8 @@ export async function avanzarMundo(db, io = null, ahora = Date.now()) {
       recursos: recursosActualizados,
       edificio: edificioActualizado,
       mensaje: nuevoMensaje,
+      batalla,
+      nuevaEra,
     };
     completados.push(resultado);
 

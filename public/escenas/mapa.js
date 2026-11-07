@@ -53,9 +53,36 @@ export class EscenaMapa extends Phaser.Scene {
       this.textures.addCanvas('niebla_mapa', lienzo);
     }
 
+    this.hilos = this.add.graphics();
+    this.hilos.setDepth(2);
     this.capaTerritorios = this.add.container(0, 0);
+    this.capaTerritorios.setDepth(4);
     this.dibujarMercado();
     this.dibujarTodo();
+  }
+
+  // El hilo rojo que une a dos clanes aliados.
+  dibujarAlianzas() {
+    this.hilos.clear();
+    this.hilos.lineStyle(5, 0x9e2b25, 0.9);
+    for (const alianza of this.mundo.alianzas || []) {
+      const a = this.mundo.ronin.find((r) => r.id === alianza.a);
+      const b = this.mundo.ronin.find((r) => r.id === alianza.b);
+      if (!a || !b || a.x == null || b.x == null) continue;
+      const medioX = (a.x + b.x) / 2;
+      const medioY = Math.min(a.y, b.y) - 90;
+      const curva = new Phaser.Curves.QuadraticBezier(
+        new Phaser.Math.Vector2(a.x, a.y + 10),
+        new Phaser.Math.Vector2(medioX, medioY),
+        new Phaser.Math.Vector2(b.x, b.y + 10),
+      );
+      curva.draw(this.hilos, 32);
+    }
+  }
+
+  actualizarAlianzas(alianzas) {
+    this.mundo.alianzas = alianzas || [];
+    this.dibujarAlianzas();
   }
 
   dibujarMercado() {
@@ -79,6 +106,7 @@ export class EscenaMapa extends Phaser.Scene {
       const ronin = this.mundo.ronin.find((r) => r.territorio === territorio.id);
       this.dibujarTerritorio(territorio, ronin || null);
     }
+    this.dibujarAlianzas();
   }
 
   edificioPrincipal(ronin) {
@@ -157,6 +185,37 @@ export class EscenaMapa extends Phaser.Scene {
       const anillo = this.add.circle(0, 10, 92, 0x9e2b25, 0);
       anillo.setStrokeStyle(3, 0x9e2b25, 0.9);
       grupo.add(anillo);
+    }
+
+    // Escudo tras un ataque, o marcha enemiga en camino.
+    const ahora = Date.now();
+    if (ronin.escudoHasta && ronin.escudoHasta > ahora) {
+      const escudo = this.add.circle(0, 10, 100, 0x6fa8dc, 0.18);
+      escudo.setStrokeStyle(3, 0x6fa8dc, 0.8);
+      grupo.add(escudo);
+    }
+    if (ronin.bajoAtaque) {
+      const alerta = this.add.text(0, -118, '⚔ under attack', {
+        fontFamily: '"Iowan Old Style", Palatino, Georgia, serif',
+        fontSize: '20px',
+        color: '#fdfaf2',
+        backgroundColor: 'rgba(158, 43, 37, 0.92)',
+        padding: { x: 8, y: 3 },
+      });
+      alerta.setOrigin(0.5, 0.5);
+      grupo.add(alerta);
+      this.tweens.add({ targets: alerta, alpha: 0.35, yoyo: true, repeat: -1, duration: 500 });
+    }
+    if (ronin.estado === 'atacando') {
+      const marcha = this.add.text(0, -118, '⚔ marching', {
+        fontFamily: '"Iowan Old Style", Palatino, Georgia, serif',
+        fontSize: '20px',
+        color: '#241f18',
+        backgroundColor: 'rgba(253, 250, 242, 0.9)',
+        padding: { x: 8, y: 3 },
+      });
+      marcha.setOrigin(0.5, 0.5);
+      grupo.add(marcha);
     }
 
     // Zona de clic para visitar el santuario.

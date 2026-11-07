@@ -124,6 +124,32 @@ function crearEsquema(db) {
       creado INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS tropas (
+      ronin_id INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      cantidad INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (ronin_id, tipo)
+    );
+
+    CREATE TABLE IF NOT EXISTS alianzas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clan_a INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      clan_b INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      estado TEXT NOT NULL CHECK (estado IN ('propuesta', 'activa', 'rechazada', 'rota')),
+      creada INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS batallas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      atacante INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      defensor INTEGER NOT NULL REFERENCES ronin(id) ON DELETE CASCADE,
+      ataque REAL NOT NULL,
+      defensa REAL NOT NULL,
+      resultado TEXT NOT NULL,
+      botin_json TEXT NOT NULL,
+      hora INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS config (
       clave TEXT PRIMARY KEY,
       valor TEXT NOT NULL

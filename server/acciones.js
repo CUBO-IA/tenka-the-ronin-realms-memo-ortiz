@@ -155,6 +155,14 @@ export function guardarMensaje(db, roninId, texto, opciones, proveedor = 'predef
 // Mensaje sin IA para cada momento: inicio o fin de una tarea.
 export function mensajePredefinido(db, ronin, momento, tarea = null) {
   if (momento === 'fin_tarea' && tarea) return crearMensajeFinTarea(db, ronin, tarea);
+  if (momento === 'nueva_era') {
+    const inicial = ronin.nombre ? ronin.nombre[0].toUpperCase() : 'R';
+    const texto =
+      ronin.bando === 'sombra'
+        ? `Master, the dark flame burns. The mist lifts from our land: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`
+        : `Master, the altar flame is lit. The fog lifts from our sanctuary: Era ${ronin.era} begins, and the island can see us now. — ${inicial}.`;
+    return guardarMensaje(db, ronin.id, texto, generarOpciones(db, ronin));
+  }
   return crearMensajeInicial(db, ronin);
 }
 

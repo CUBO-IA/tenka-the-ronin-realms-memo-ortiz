@@ -35,19 +35,26 @@ tenka/
 │   ├── maquetas/           cómo se ve cada pantalla (solo guía)
 │   └── piezas/             fondos, sprites y edificios para recortar
 ├── server/
-│   ├── index.js            Express + Socket.IO + rutas
-│   ├── db.js               SQLite y esquema
-│   ├── reloj.js            avanza el mundo: tareas, producción, batallas
+│   ├── index.js            arranque: Express + Socket.IO + reloj
+│   ├── app.js              rutas de la API y del celular
+│   ├── db.js               SQLite, esquema y migraciones
+│   ├── reloj.js            avanza el mundo: tareas, eras, batallas
 │   ├── reglas.js           todos los números del juego en un solo lugar (se ajustan jugando)
-│   ├── acciones.js         lista cerrada de acciones y su validación
+│   ├── acciones.js         acciones de la era 1, mensajes y bandeja
+│   ├── ordenes.js          una sola puerta para toda orden: valida y despacha
+│   ├── conflicto.js        alianzas, tropas y ataques
 │   ├── agente.js           arma el prompt, llama a la IA, valida la respuesta
 │   ├── ia.js               Groq → Gemini → respaldo
-│   ├── mercado.js          conversación entre agentes y ofertas
-│   └── push.js             notificaciones
-├── public/                 la computadora (Phaser)
-│   ├── index.html
-│   ├── escenas/            Inicio, Qr, Mapa, Santuario, Mercado
-│   └── assets/             sprites y fondos recortados
+│   ├── mundo.js            lo que todos ven del mapa
+│   ├── territorios.js      los 12 territorios de la isla
+│   ├── push.js             notificaciones Web Push
+│   └── mercado.js          (pendiente) conversación entre agentes y ofertas
+├── public/                 la computadora
+│   ├── index.html          inicio, QR, tarjeta del rōnin y el mundo (HUD en HTML)
+│   ├── pc.js               flujo de pantallas y Socket.IO
+│   ├── santuario-pc.js     el canvas de Phaser más la interfaz del mundo
+│   ├── escenas/            santuario.js y mapa.js (Phaser)
+│   └── assets/             sprites y fondos recortados por scripts/recortar-arte.py
 ├── public/m/               el celular
 ├── tests/
 ├── .env.example
@@ -104,8 +111,13 @@ Las hojas de `arte/piezas/` tienen fondo gris plano y los cuadros no están perf
 3. Guardar en `public/assets/` con nombres como `ronin-luz-caminar-1.png` o `torii-luz-terminado.png`.
 4. El color del kimono y del hakama se cambia en código (`public/recolorear.js`): el script genera una máscara por sprite (rojo = kimono, azul = hakama) y el canvas tiñe solo esos píxeles conservando sombras y luces. Para ajustar zonas: `python3 scripts/recortar-arte.py --solo-mascaras`.
 
+## Estado (7 de noviembre de 2026)
+
+Hechos: hitos 1, 2, 3, 4, 5 y 7 (base, santuario, IA, mapa, conversación y avisos, conflicto). Valor de demo en `reglas.js`: las tropas se entrenan desde la era 2 (el diseño las pone en el dojo de la era 3); los ataques van desde la era 2 como dice el diseño.
+
 ## Lo que falta
 
-- [ ] Hitos 1 a 8 de `docs/DISENO.md`.
-- [ ] Recortar las piezas de `arte/piezas/` a `public/assets/`. Las etapas corregidas (`*-casa-terminada`, `*-castillo-cimientos`, `*-muro-terminado`, `*-muelle-construccion`, `*-altar-terminado`) reemplazan a las de la hoja grande.
+- [ ] Hito 6: eras 2 y 3 (edificios, aldeanos) y el Mercado del Cruce con conversación entre agentes.
+- [ ] Hito 8: ensayo de la demo (red local con hotspot o Cloudflare Tunnel para instalar y avisos).
+- [ ] Recortar las piezas que faltan de `arte/piezas/` (eras 2 y 3, aldeanos, tropas). Las etapas corregidas (`*-castillo-cimientos`, `*-muro-terminado`, `*-muelle-construccion`, `*-altar-terminado`) reemplazan a las de la hoja grande.
 - [ ] Decisiones pendientes de arte: ver `docs/DISENO.md`, sección 9.

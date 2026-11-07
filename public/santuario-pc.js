@@ -160,6 +160,26 @@ export function modoActual() {
   return modo;
 }
 
+// Una marcha llegó a un santuario que está en pantalla (propio o visitado).
+export function batallaInicio(batalla) {
+  const activa = escena();
+  if (activa && activa.ronin?.id === batalla?.defensor?.id) {
+    activa.mostrarAtaque(batalla.atacante);
+  }
+  escenaMapa()?.actualizarRonin({ ...batalla.atacante, estado: 'atacando' });
+}
+
+export function batallaResultado(resultado) {
+  const activa = escena();
+  if (activa && activa.ronin?.id === resultado?.defensor?.id) {
+    activa.resolverAtaque(resultado);
+  }
+}
+
+export function actualizarAlianzas(alianzas) {
+  escenaMapa()?.actualizarAlianzas(alianzas);
+}
+
 export function ocultarSantuario() {
   if (relojTarea) {
     clearInterval(relojTarea);
@@ -250,6 +270,8 @@ function descripcionDeTarea(ronin) {
     return `Building the ${ETIQUETA_EDIFICIO[edificio] || edificio || 'sanctuary'}`;
   }
   if (tarea.accion === 'descansar') return 'Resting';
+  if (tarea.accion === 'entrenar') return `Training a ${tarea.parametros?.tropa || 'warrior'}`;
+  if (tarea.accion === 'atacar') return 'Marching to battle';
   return 'Working…';
 }
 

@@ -3,14 +3,9 @@
 // ejecuta. Si la IA no responde, se usan los mensajes predefinidos.
 
 import { z } from 'zod';
-import {
-  accionesValidas,
-  ejecutarAccion,
-  guardarMensaje,
-  mensajePredefinido,
-  obtenerEdificios,
-  obtenerRecursos,
-} from './acciones.js';
+import { guardarMensaje, mensajePredefinido, obtenerEdificios, obtenerRecursos } from './acciones.js';
+import { accionesValidas, ejecutarOrden } from './ordenes.js';
+import { tropasDe } from './conflicto.js';
 import { crearIa } from './ia.js';
 import { reglas } from './reglas.js';
 
@@ -114,8 +109,14 @@ function promptEstado(db, ronin, momento, extra = {}) {
     bando: ronin.bando,
     recursos: obtenerRecursos(db, ronin.id),
     edificios: obtenerEdificios(db, ronin.id).map((e) => ({ tipo: e.tipo, etapa: e.etapa })),
+    tropas: tropasDe(db, ronin.id),
     tarea_terminada: extra.tarea || null,
-    ACCIONES_VALIDAS: extra.validas.map((v) => ({ accion: v.accion, parametros: v.parametros })),
+    batalla: extra.batalla || null,
+    ACCIONES_VALIDAS: extra.validas.map((v) => ({
+      accion: v.accion,
+      parametros: v.parametros,
+      ...(v.objetivo ? { objetivo: v.objetivo } : {}),
+    })),
   };
   if (momento === 'orden_libre') {
     estado.ORDEN_DEL_MAESTRO = limpiarTexto(extra.texto, reglas.ia.maxCaracteresOrden);
@@ -154,10 +155,13 @@ export async function decidir(db, ronin, momento, extra = {}, ahora = Date.now()
 
 // Mensaje del rōnin para un momento: IA si responde, predefinido si no.
 // Siempre queda guardado en la tabla de mensajes.
-export async function mensajeDelRonin(db, ronin, momento, tarea = null) {
-  const decision = await decidir(db, ronin, momento, { tarea });
+export async function mensajeDelRonin(db, ronin, momento, tarea = null, extra = {}) {
+  const decision = await decidir(db, ronin, momento, { tarea, ...extra });
   if (decision) {
     return guardarMensaje(db, ronin.id, decision.mensaje, decision.opciones, decision.proveedor);
+  }
+  if (momento === 'fin_batalla' && extra.batalla) {
+    return guardarMensaje(db, ronin.id, extra.batalla, accionesValidas(db, ronin).slice(0, 3));
   }
   return mensajePredefinido(db, ronin, momento, tarea);
 }
@@ -165,6 +169,10 @@ export async function mensajeDelRonin(db, ronin, momento, tarea = null) {
 // Sin IA, una orden escrita se entiende por palabras clave: "gather cedar",
 // "build the house", "rest". Devuelve la acción válida que mejor coincide.
 const PALABRAS = {
+  atacar: ['attack', 'raid', 'strike', 'march', 'assault', 'invade'],
+  proponer_alianza: ['ally', 'alliance', 'pact', 'friend', 'thread'],
+  responder_alianza: ['accept', 'refuse', 'reject', 'decline'],
+  entrenar: ['train', 'recruit', 'soldier', 'samurai', 'archer', 'oni', 'kitsune', 'troop'],
   recolectar: ['gather', 'collect', 'chop', 'cut', 'mine', 'harvest', 'get', 'fetch'],
   construir: ['build', 'construct', 'raise', 'upgrade', 'finish', 'erect'],
   descansar: ['rest', 'sleep', 'wait', 'meditate', 'pause'],
@@ -185,6 +193,10 @@ const SINONIMOS = {
   torii: ['torii', 'gate', 'shrine'],
   circulo: ['circle', 'stones', 'ring'],
   altar: ['altar', 'temple', 'shrine'],
+  samurai: ['samurai', 'swordsman', 'soldier', 'warrior'],
+  arquero: ['archer', 'bow'],
+  oni: ['oni', 'demon', 'ogre'],
+  kitsune: ['kitsune', 'fox', 'spirit'],
 };
 
 export function interpretarPorPalabras(texto, validas) {
@@ -200,8 +212,25 @@ export function interpretarPorPalabras(texto, validas) {
   }
 
   const candidatas = validas.filter((v) => !accion || v.accion === accion);
+
+  // Órdenes con otro clan de por medio: se busca el nombre del rōnin en el texto.
+  const conClan = candidatas.find((v) => v.objetivo && frase.includes(` ${String(v.objetivo).toLowerCase()}`));
+  if (conClan) {
+    if (conClan.accion !== 'responder_alianza') return conClan;
+    const rechaza = contiene(['refuse', 'reject', 'decline', 'no']);
+    return (
+      candidatas.find(
+        (v) => v.objetivo === conClan.objetivo && v.parametros.respuesta === (rechaza ? 'rechazar' : 'aceptar'),
+      ) || conClan
+    );
+  }
+  if (accion === 'responder_alianza') {
+    const rechaza = contiene(['refuse', 'reject', 'decline']);
+    return candidatas.find((v) => v.parametros?.respuesta === (rechaza ? 'rechazar' : 'aceptar')) || null;
+  }
+
   const conObjeto = candidatas.find((v) => {
-    const objeto = v.parametros?.recurso || v.parametros?.edificio;
+    const objeto = v.parametros?.recurso || v.parametros?.edificio || v.parametros?.tropa;
     return objeto && contiene(SINONIMOS[objeto] || [objeto]);
   });
   if (conObjeto) return conObjeto;
@@ -233,9 +262,10 @@ export async function interpretarOrden(db, ronin, texto, ahora = Date.now()) {
   // Una orden no puede inventar acciones: solo las válidas, y solo si está libre.
   const ocupado = Boolean(ronin.tareaFin && ronin.tareaFin > ahora);
   let ejecutada = null;
-  if (elegida && !ocupado) {
+  const esInmediata = elegida && ['proponer_alianza', 'responder_alianza'].includes(elegida.accion);
+  if (elegida && (!ocupado || esInmediata)) {
     try {
-      ejecutada = ejecutarAccion(db, ronin.id, elegida, ahora);
+      ejecutada = ejecutarOrden(db, ronin.id, elegida, ahora);
     } catch {
       ejecutada = null;
     }
@@ -260,5 +290,7 @@ export async function interpretarOrden(db, ronin, texto, ahora = Date.now()) {
     ronin: ejecutada?.ronin || null,
     recursos: ejecutada?.recursos || null,
     edificios: ejecutada?.edificios || null,
+    avisos: ejecutada?.avisos || [],
+    batalla: ejecutada?.batalla || null,
   };
 }

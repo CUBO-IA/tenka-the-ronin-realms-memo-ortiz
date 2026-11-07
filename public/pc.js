@@ -2,9 +2,12 @@
 
 import { aplicarKamon, cargarPiezas, pintarRonin } from '/recolorear.js';
 import {
+  actualizarAlianzas,
   actualizarEdificio,
   actualizarEdificios,
   actualizarMapa,
+  batallaInicio,
+  batallaResultado,
   actualizarRecursos,
   actualizarRonin,
   mostrarMapa,
@@ -330,6 +333,18 @@ function conectarSocket() {
 
   socket.on('mundo:ronin', (datos) => {
     if (datos?.ronin) actualizarMapa(datos.ronin);
+  });
+
+  socket.on('mundo:alianzas', (datos) => {
+    if (Array.isArray(datos?.alianzas)) actualizarAlianzas(datos.alianzas);
+  });
+
+  socket.on('batalla:inicio', (datos) => {
+    if (datos?.atacante && datos?.defensor) batallaInicio(datos);
+  });
+
+  socket.on('batalla:resultado', (datos) => {
+    if (datos?.ganador) batallaResultado(datos);
   });
 }
 

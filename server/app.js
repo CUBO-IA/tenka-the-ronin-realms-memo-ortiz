@@ -8,8 +8,11 @@ import { catalogoPublico } from './catalogo.js';
 import { iniciarSesion } from './auth.js';
 import { crearEmparejamiento, consumirEmparejamiento } from './emparejamiento.js';
 import { interpretarOrden, mensajeDelRonin } from './agente.js';
+import { ejecutarOrden } from './ordenes.js';
+import { enviarPush } from './push.js';
 import { borrarSuscripcion, guardarSuscripcion, llavesVapid } from './push.js';
 import { resumenMundo, resumenPorId, santuarioDe } from './mundo.js';
+import { alianzasActivas } from './conflicto.js';
 import { asignarTerritoriosFaltantes } from './territorios.js';
 import { ErrorDeJuego } from './errores.js';
 import { crearRonin, roninDeUsuario } from './ronin.js';
@@ -53,6 +56,28 @@ function emitirAUsuario(app, usuarioId, evento, datos) {
   const io = app.locals.io;
   if (!io) return;
   io.to(`usuario:${usuarioId}`).emit(evento, datos);
+}
+
+// Una orden puede tocar a otro jugador: alianza propuesta, respuesta o ataque.
+function avisarAOtros(app, resultado) {
+  const db = app.locals.db;
+  for (const aviso of resultado.avisos || []) {
+    emitirAUsuario(app, aviso.usuarioId, 'mensaje:nuevo', { mensaje: aviso.mensaje });
+    emitirMundo(app, aviso.roninId);
+    enviarPush(db, aviso.usuarioId, {
+      titulo: 'Tenka',
+      cuerpo: aviso.mensaje.texto,
+      url: '/m',
+      tag: `ronin-${aviso.roninId}`,
+    }).catch(() => {});
+  }
+  const io = app.locals.io;
+  if (resultado.batalla && io) io.emit('batalla:inicio', resultado.batalla);
+  if (resultado.orden?.accion === 'responder_alianza' && io) {
+    io.emit('mundo:alianzas', {
+      alianzas: alianzasActivas(db).map((a) => ({ a: a.clan_a, b: a.clan_b })),
+    });
+  }
 }
 
 // Lo que cambia en un santuario se ve en el mapa de todas las computadoras.
@@ -347,7 +372,8 @@ export function crearApp({ db }) {
         throw new ErrorDeJuego('Awaken your rōnin first.', 404, 'RONIN_NO_ENCONTRADO');
       }
 
-      const resultado = ejecutarAccion(db, ronin.id, req.body);
+      const resultado = ejecutarOrden(db, ronin.id, req.body);
+      avisarAOtros(app, resultado);
       emitirAUsuario(app, sesion.usuarioId, 'ronin:actualizado', {
         ronin: resultado.ronin,
       });
@@ -454,6 +480,7 @@ export function crearApp({ db }) {
       }
 
       const resultado = await interpretarOrden(db, ronin, texto.slice(0, 300));
+      avisarAOtros(app, { ...resultado, orden: resultado.accion });
 
       if (resultado.ronin) {
         emitirAUsuario(app, sesion.usuarioId, 'ronin:actualizado', { ronin: resultado.ronin });

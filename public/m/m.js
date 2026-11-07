@@ -612,6 +612,10 @@ function actualizarEstadoTarea() {
         descripcion = `Building the ${ETIQUETA_EDIFICIO[edificio] || edificio || 'sanctuary'}`;
       } else if (tarea.accion === 'descansar') {
         descripcion = 'Resting at sanctuary';
+      } else if (tarea.accion === 'entrenar') {
+        descripcion = `Training a ${tarea.parametros?.tropa || 'warrior'}`;
+      } else if (tarea.accion === 'atacar') {
+        descripcion = 'Marching to battle';
       }
     } catch {
       descripcion = 'Working on task…';

@@ -46,6 +46,29 @@ export const reglas = {
     groqModelo: 'llama-3.3-70b-versatile',
     geminiModelo: 'gemini-3.5-flash-lite',
   },
+  // Conflicto. Valores de demo: en el diseño las tropas llegan con el dojo de
+  // la era 3; acá se entrenan desde la era 2 para que la pelea se vea en una
+  // partida corta. Los ataques van desde la era 2, como dice el diseño.
+  conflicto: {
+    desdeEra: 2,
+    marchaMs: 8000, // lo que tarda el ataque en llegar
+    entrenarMs: 5000,
+    azar: 0.25, // ±25 % en cada fuerza
+    botinPorcentaje: 0.3,
+    escudoMs: 60000,
+    ataqueBase: 10,
+    defensaBase: 8,
+    porEra: 5,
+    porEdificioTerminado: 4,
+    aliadoPorcentaje: 0.5, // parte de la defensa del aliado que suma
+    tropasPerdidasAlPerder: 0.5,
+    tropas: {
+      samurai: { bando: 'luz', etiqueta: 'Samurai', ataque: 6, defensa: 3, costo: { arroz: 10, hierro: 2 } },
+      arquero: { bando: 'luz', etiqueta: 'Archer', ataque: 4, defensa: 5, costo: { arroz: 10, cedro: 8 } },
+      oni: { bando: 'sombra', etiqueta: 'Oni', ataque: 7, defensa: 2, costo: { arroz: 10, hongos: 2 } },
+      kitsune: { bando: 'sombra', etiqueta: 'Kitsune spirit', ataque: 4, defensa: 5, costo: { arroz: 10, sauce: 8 } },
+    },
+  },
   etapas: ['cimientos', 'construccion', 'terminado'],
   edificiosEra1: {
     luz: {
@@ -118,6 +141,12 @@ export const reglas = {
     },
   },
 };
+
+export function tropasDeBando(bando) {
+  return Object.entries(reglas.conflicto.tropas)
+    .filter(([, def]) => def.bando === bando)
+    .map(([tipo, def]) => ({ tipo, ...def }));
+}
 
 export function recursosDeBando(bando) {
   if (bando === 'sombra') {
