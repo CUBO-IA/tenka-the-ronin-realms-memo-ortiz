@@ -39,21 +39,21 @@ export class EscenaSantuario extends Phaser.Scene {
       luz: {
         empalizada: { x: 95, y: y + 20, escala: 0.9, fondo: true },
         casa: { x: 330, y, escala: 1.3 },
-        terrazas: { x: 600, y: atras, escala: 0.85, fondo: true },
-        granero: { x: 860, y: atras, escala: 0.85, fondo: true },
-        forja: { x: 1140, y: atras, escala: 0.85, fondo: true },
-        altar: { x: 1420, y: atras, escala: 0.85, fondo: true },
-        torre: { x: 1630, y: atras - 10, escala: 0.8, fondo: true },
+        terrazas: { x: 680, y: atras, escala: 0.85, fondo: true },
+        granero: { x: 930, y: atras, escala: 0.85, fondo: true },
+        forja: { x: 1180, y: atras, escala: 0.85, fondo: true },
+        altar: { x: 1440, y: atras, escala: 0.85, fondo: true },
+        torre: { x: 1650, y: atras - 10, escala: 0.8, fondo: true },
         torii: { x: 1790, y, escala: 1.2 },
       },
       sombra: {
         muro: { x: 95, y: y + 20, escala: 0.9, fondo: true },
         choza: { x: 330, y, escala: 1.3 },
-        huerto: { x: 600, y: atras, escala: 0.85, fondo: true },
-        pozo: { x: 860, y: atras, escala: 0.85, fondo: true },
-        caldero: { x: 1140, y: atras, escala: 0.85, fondo: true },
-        altar: { x: 1420, y: atras, escala: 0.85, fondo: true },
-        farol: { x: 1630, y: atras - 10, escala: 0.8, fondo: true },
+        huerto: { x: 680, y: atras, escala: 0.85, fondo: true },
+        pozo: { x: 930, y: atras, escala: 0.85, fondo: true },
+        caldero: { x: 1180, y: atras, escala: 0.85, fondo: true },
+        altar: { x: 1440, y: atras, escala: 0.85, fondo: true },
+        farol: { x: 1650, y: atras - 10, escala: 0.8, fondo: true },
         circulo: { x: 1790, y, escala: 1.2 },
       },
     };
@@ -61,12 +61,12 @@ export class EscenaSantuario extends Phaser.Scene {
     // Cada aldeano trabaja en su edificio (granjero en las terrazas, herrero en
     // la forja); los guardias van al patio de armas, con las tropas.
     this.aldeanosPorEdificio = {
-      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 560, y: atras + 8, guardia: false },
-      forja: { tipo: 'luz-herrero', cuadros: 4, ritmo: 5, x: 1215, y: atras + 10, guardia: false },
+      terrazas: { tipo: 'luz-granjero-sembrar', cuadros: 2, ritmo: 2, x: 640, y: atras + 8, guardia: false },
+      forja: { tipo: 'luz-herrero', cuadros: 4, ritmo: 5, x: 1255, y: atras + 10, guardia: false },
       empalizada: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, guardia: true },
       torre: { tipo: 'luz-guardia', cuadros: 4, ritmo: 6, guardia: true },
-      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 560, y: atras + 8, guardia: false },
-      caldero: { tipo: 'sombra-alquimista', cuadros: 4, ritmo: 5, x: 1215, y: atras + 10, guardia: false },
+      huerto: { tipo: 'sombra-recolector', cuadros: 4, ritmo: 5, x: 640, y: atras + 8, guardia: false },
+      caldero: { tipo: 'sombra-alquimista', cuadros: 4, ritmo: 5, x: 1255, y: atras + 10, guardia: false },
       muro: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
       farol: { tipo: 'sombra-espectro', cuadros: 4, ritmo: 6, guardia: true },
     };
