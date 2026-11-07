@@ -11,6 +11,7 @@ import {
   batallaResultado,
   actualizarRecursos,
   actualizarRonin,
+  actualizarTropas,
   mostrarMapa,
   mostrarMensaje,
   mostrarSantuario,
@@ -50,7 +51,7 @@ const pieSesion = $('#pie-sesion');
 let usuario = null;
 let ronin = null;
 // Estado del mundo del rōnin que manda el servidor.
-let mundo = { recursos: {}, edificios: [], mensaje: null };
+let mundo = { recursos: {}, edificios: [], tropas: {}, mensaje: null };
 let catalogo = null;
 let socket = null;
 let vistaActual = 'inicio';
@@ -238,6 +239,7 @@ function irAlSantuario() {
     ronin,
     recursos: mundo.recursos,
     edificios: mundo.edificios,
+    tropas: mundo.tropas,
     mensaje: mundo.mensaje,
     colores: coloresDelRonin(),
   });
@@ -247,6 +249,7 @@ function guardarMundo(datos) {
   if (!datos) return;
   if (datos.recursos) mundo.recursos = datos.recursos;
   if (Array.isArray(datos.edificios)) mundo.edificios = datos.edificios;
+  if (datos.tropas) mundo.tropas = datos.tropas;
   if (datos.mensaje) mundo.mensaje = datos.mensaje;
 }
 
@@ -353,6 +356,12 @@ function conectarSocket() {
     if (datos?.ronin) actualizarMapa(datos.ronin);
   });
 
+  socket.on('tropas:actualizadas', (datos) => {
+    if (!datos?.tropas) return;
+    mundo.tropas = datos.tropas;
+    actualizarTropas(datos.tropas);
+  });
+
   socket.on('mundo:alianzas', (datos) => {
     if (Array.isArray(datos?.alianzas)) actualizarAlianzas(datos.alianzas);
   });
@@ -381,7 +390,7 @@ function volverAlInicio(mensaje = '') {
   detenerRelojSello();
   clearTimeout(relojTarjeta);
   ocultarSantuario();
-  mundo = { recursos: {}, edificios: [], mensaje: null };
+  mundo = { recursos: {}, edificios: [], tropas: {}, mensaje: null };
   if (socket) {
     socket.disconnect();
     socket = null;
