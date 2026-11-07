@@ -48,7 +48,7 @@ describe('crear el rōnin desde el celular', () => {
     assert.equal(ronin.bando, 'luz');
     assert.equal(ronin.bandoEtiqueta, 'Light');
     assert.equal(ronin.kimono, 'indigo');
-    assert.equal(ronin.faja, 'blanco');
+    assert.equal(ronin.hakama, 'negro');
     assert.equal(ronin.tocado, 'sombrero_paja');
     assert.equal(ronin.kamon, 'grulla');
     assert.equal(ronin.era, 1);
@@ -72,7 +72,7 @@ describe('crear el rōnin desde el celular', () => {
           nombre: 'Kage',
           bando: 'sombra',
           kimono: 'negro_violeta',
-          faja: 'bermellon',
+          hakama: 'marron',
           tocado: 'mono',
           kamon: 'luna',
         }),
@@ -105,10 +105,10 @@ describe('crear el rōnin desde el celular', () => {
     assert.match(respuesta.body.campos.kimono, /does not belong/);
   });
 
-  test('rechaza bando, faja, tocado o kamon inventados', async () => {
+  test('rechaza bando, hakama, tocado o kamon inventados', async () => {
     for (const cambio of [
       { bando: 'niebla' },
-      { faja: 'rosa' },
+      { hakama: 'rosa' },
       { tocado: 'corona' },
       { kamon: 'dragon' },
     ]) {

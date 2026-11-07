@@ -102,7 +102,7 @@ Las hojas de `arte/piezas/` tienen fondo gris plano y los cuadros no están perf
 1. Recortar cada pose o etapa a mano o con un script, una imagen por pieza.
 2. Quitar el fondo gris (es un color plano: se reemplaza por transparente).
 3. Guardar en `public/assets/` con nombres como `ronin-luz-caminar-1.png` o `torii-luz-terminado.png`.
-4. El color del kimono y la faja se cambia en código: dibujar el *sprite* en un canvas y reemplazar los colores de la paleta original por los elegidos.
+4. El color del kimono y del hakama se cambia en código (`public/recolorear.js`): el script genera una máscara por sprite (rojo = kimono, azul = hakama) y el canvas tiñe solo esos píxeles conservando sombras y luces. Para ajustar zonas: `python3 scripts/recortar-arte.py --solo-mascaras`.
 
 ## Lo que falta
 

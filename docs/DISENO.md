@@ -49,8 +49,8 @@ Shinano, 1610. Una isla partida en dos por una cordillera. Del lado de la **luz*
 
 ### Crear el rōnin (celular)
 - **Bando:** luz o sombra.
-- **Color del kimono:** cinco por bando. Luz: índigo, carmesí, verde bosque, gris ceniza, ocre. Sombra: negro violeta, rojo sangre, gris humo, azul medianoche, hueso.
-- **Color de la faja:** cuatro opciones.
+- **Color del kimono:** cuatro por bando. Luz: índigo, carmesí, verde bosque, ocre. Sombra: negro violeta, rojo sangre, gris humo, azul medianoche.
+- **Color del hakama (el pantalón):** cuatro opciones, iguales para los dos bandos: negro, pizarra, marrón, índigo oscuro. La faja no se elige: queda como viene en el dibujo de cada bando.
 - **Tocado:** sombrero de paja o moño.
 - **Kamon**, el emblema del clan: una lista de unos doce. Aparece en el estandarte, el mapa y la interfaz.
 - **Nombre.**
@@ -256,7 +256,7 @@ Formato que devuelve el modelo al pedir una decisión:
 |---|---|
 | `usuarios` | id, nombre, pin_hash, creado |
 | `emparejamientos` | token, usuario_id, vence, usado |
-| `ronin` | id, usuario_id, nombre, bando, kimono, faja, tocado, kamon, territorio, era, estado, tarea, tarea_fin, escudo_hasta |
+| `ronin` | id, usuario_id, nombre, bando, kimono, hakama, tocado, kamon, territorio, era, estado, tarea, tarea_fin, escudo_hasta |
 | `recursos` | ronin_id, tipo, cantidad |
 | `edificios` | id, ronin_id, tipo, etapa, progreso |
 | `tropas` | ronin_id, tipo, cantidad |
@@ -305,7 +305,7 @@ Formato que devuelve el modelo al pedir una decisión:
 | Necesidad | Solución |
 |---|---|
 | Edificios y personajes | Recortados de las hojas, un PNG por pose o etapa, con el fondo gris quitado |
-| Color del kimono y la faja | Se cambia en código sobre el mismo *sprite* (recoloreo por paleta) |
+| Color del kimono y del hakama | Se cambia en código sobre el mismo *sprite*: una máscara marca cada prenda y el color nuevo conserva las sombras y luces del original |
 | Nieve, niebla, brasas, día y noche | Efectos en código (partículas y capas de color) |
 | Interfaz | HTML y CSS sobre el canvas, con textura de papel *washi* |
 

@@ -4,7 +4,7 @@ import {
   bandoPorId,
   etiquetaDeBando,
   idsBandos,
-  idsFajas,
+  idsHakamas,
   idsKamon,
   idsTocados,
   kimonoPorId,
@@ -23,7 +23,7 @@ const esquemaRonin = z.object({
     ),
   bando: z.enum(idsBandos, { error: 'Choose the path of Light or Shadow.' }),
   kimono: z.string({ error: 'Choose a kimono color.' }),
-  faja: z.enum(idsFajas, { error: 'Choose a sash color.' }),
+  hakama: z.enum(idsHakamas, { error: 'Choose a hakama color.' }),
   tocado: z.enum(idsTocados, { error: 'Choose straw hat or topknot.' }),
   kamon: z.enum(idsKamon, { error: 'Choose a clan crest.' }),
 });
@@ -59,7 +59,7 @@ export function serializarRonin(fila) {
     bando: fila.bando,
     bandoEtiqueta: etiquetaDeBando(fila.bando),
     kimono: fila.kimono,
-    faja: fila.faja,
+    hakama: fila.hakama,
     tocado: fila.tocado,
     kamon: fila.kamon,
     territorio: fila.territorio,
@@ -95,7 +95,7 @@ export function crearRonin(db, usuarioId, datos) {
     const info = db
       .prepare(
         `INSERT INTO ronin
-           (usuario_id, nombre, bando, kimono, faja, tocado, kamon, era, estado, creado)
+           (usuario_id, nombre, bando, kimono, hakama, tocado, kamon, era, estado, creado)
          VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'despierto', ?)`,
       )
       .run(
@@ -103,7 +103,7 @@ export function crearRonin(db, usuarioId, datos) {
         limpio.nombre,
         limpio.bando,
         limpio.kimono,
-        limpio.faja,
+        limpio.hakama,
         limpio.tocado,
         limpio.kamon,
         ahora,

@@ -1,8 +1,18 @@
 // Recolorea el sprite del rōnin en un canvas usando su máscara.
-// La máscara marca el kimono en rojo y la faja en verde; el resto no se toca.
+// La máscara marca el kimono en rojo y el hakama en azul; el resto (piel,
+// faja, sandalias, espada, contornos) no se toca.
+//
+// Cómo se cambia el color sin perder el dibujo: cada prenda tiene un brillo
+// de referencia (la mediana de sus píxeles). Un píxel más oscuro que la
+// referencia oscurece el color nuevo en la misma proporción; uno más claro
+// le suma la misma diferencia de brillo. Así los pliegues y las luces del
+// pixel art quedan iguales con cualquier color.
 
 const imagenes = new Map();
 const piezas = new Map();
+
+const ANCHO = 240;
+const ALTO = 320;
 
 function cargarImagen(ruta) {
   if (!imagenes.has(ruta)) {
@@ -23,6 +33,27 @@ export function piezaDeTocado(tocado) {
   return tocado === 'mono' ? 'mono' : 'sombrero';
 }
 
+function datosDe(imagen) {
+  const lienzo = document.createElement('canvas');
+  lienzo.width = ANCHO;
+  lienzo.height = ALTO;
+  const contexto = lienzo.getContext('2d', { willReadFrequently: true });
+  contexto.drawImage(imagen, 0, 0, ANCHO, ALTO);
+  return contexto.getImageData(0, 0, ANCHO, ALTO).data;
+}
+
+// Mediana del brillo de los píxeles que cumplen `pertenece`.
+function brilloDeReferencia(pixeles, pertenece) {
+  const brillos = [];
+  for (let i = 0; i < pixeles.length; i += 4) {
+    if (pixeles[i + 3] === 0 || !pertenece(i)) continue;
+    brillos.push((pixeles[i] + pixeles[i + 1] + pixeles[i + 2]) / 3);
+  }
+  if (!brillos.length) return 1;
+  brillos.sort((a, b) => a - b);
+  return brillos[Math.floor(brillos.length / 2)] || 1;
+}
+
 export async function cargarPiezas(bando, tocado) {
   const pieza = piezaDeTocado(tocado);
   const clave = `${bando}-${pieza}`;
@@ -35,15 +66,18 @@ export async function cargarPiezas(bando, tocado) {
         cargarImagen(`${base}-mascara.png`),
       ]);
 
-      const lienzo = document.createElement('canvas');
-      lienzo.width = 240;
-      lienzo.height = 320;
-      const contexto = lienzo.getContext('2d', { willReadFrequently: true });
-      contexto.drawImage(mascara, 0, 0, 240, 320);
+      const datosSprite = datosDe(sprite);
+      const datosMascara = datosDe(mascara);
+      const esKimono = (i) => datosMascara[i] > 128;
+      const esHakama = (i) => datosMascara[i + 2] > 128;
 
       return {
         sprite,
-        datosMascara: contexto.getImageData(0, 0, 240, 320).data,
+        datosMascara,
+        referencia: {
+          kimono: brilloDeReferencia(datosSprite, esKimono),
+          hakama: brilloDeReferencia(datosSprite, esHakama),
+        },
       };
     })();
 
@@ -62,42 +96,50 @@ function hexARgb(color) {
       .join('');
   }
   const numero = Number.parseInt(limpio, 16);
-  if (!Number.isFinite(numero)) return [47, 63, 107];
+  if (!Number.isFinite(numero)) return null;
   return [(numero >> 16) & 255, (numero >> 8) & 255, numero & 255];
 }
 
-export function pintarRonin(lienzo, dibujo, kimono, faja) {
+function tenir(pixeles, i, color, referencia) {
+  const brillo = (pixeles[i] + pixeles[i + 1] + pixeles[i + 2]) / 3;
+  const proporcion = brillo / referencia;
+
+  for (let canal = 0; canal < 3; canal += 1) {
+    let valor;
+    if (proporcion <= 1) {
+      // Sombra: el color nuevo se oscurece en la misma proporción.
+      valor = color[canal] * Math.max(proporcion, 0.25);
+    } else {
+      // Luz: se suma la misma diferencia de brillo que tenía el original.
+      valor = color[canal] + (brillo - referencia);
+    }
+    pixeles[i + canal] = Math.max(0, Math.min(255, Math.round(valor)));
+  }
+}
+
+export function pintarRonin(lienzo, dibujo, kimono, hakama) {
   if (!lienzo || !dibujo) return;
 
   const contexto = lienzo.getContext('2d', { willReadFrequently: true });
   contexto.clearRect(0, 0, lienzo.width, lienzo.height);
   contexto.drawImage(dibujo.sprite, 0, 0, lienzo.width, lienzo.height);
 
+  const colorKimono = hexARgb(kimono);
+  const colorHakama = hexARgb(hakama);
+  if (!colorKimono && !colorHakama) return;
+
   const imagen = contexto.getImageData(0, 0, lienzo.width, lienzo.height);
   const pixeles = imagen.data;
   const mascara = dibujo.datosMascara;
-  const colores = {
-    kimono: hexARgb(kimono),
-    faja: hexARgb(faja),
-  };
 
   for (let i = 0; i < pixeles.length; i += 4) {
     if (pixeles[i + 3] === 0) continue;
 
-    const rojo = mascara[i];
-    const verde = mascara[i + 1];
-    let color = null;
-
-    if (rojo > 128 && verde < 80) color = colores.kimono;
-    else if (verde > 128 && rojo < 80) color = colores.faja;
-    if (!color) continue;
-
-    const brillo = (pixeles[i] + pixeles[i + 1] + pixeles[i + 2]) / 3;
-    const factor = 0.85 + 0.45 * (brillo / 255);
-
-    pixeles[i] = Math.min(255, Math.round(color[0] * factor));
-    pixeles[i + 1] = Math.min(255, Math.round(color[1] * factor));
-    pixeles[i + 2] = Math.min(255, Math.round(color[2] * factor));
+    if (colorKimono && mascara[i] > 128) {
+      tenir(pixeles, i, colorKimono, dibujo.referencia.kimono);
+    } else if (colorHakama && mascara[i + 2] > 128) {
+      tenir(pixeles, i, colorHakama, dibujo.referencia.hakama);
+    }
   }
 
   contexto.putImageData(imagen, 0, 0);

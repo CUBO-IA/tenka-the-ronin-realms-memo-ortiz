@@ -18,6 +18,15 @@ export function abrirDb(ruta = process.env.RUTA_DB || path.join(RAIZ, 'tenka.db'
   return db;
 }
 
+// Bases creadas antes de que el hakama reemplazara a la faja.
+function migrar(db) {
+  const columnas = db.prepare('PRAGMA table_info(ronin)').all().map((columna) => columna.name);
+  if (columnas.includes('faja') && !columnas.includes('hakama')) {
+    db.exec("ALTER TABLE ronin RENAME COLUMN faja TO hakama");
+    db.exec("UPDATE ronin SET hakama = 'negro'");
+  }
+}
+
 function crearEsquema(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
@@ -57,7 +66,7 @@ function crearEsquema(db) {
       nombre TEXT NOT NULL,
       bando TEXT NOT NULL CHECK (bando IN ('luz', 'sombra')),
       kimono TEXT NOT NULL,
-      faja TEXT NOT NULL,
+      hakama TEXT NOT NULL,
       tocado TEXT NOT NULL,
       kamon TEXT NOT NULL,
       territorio TEXT,

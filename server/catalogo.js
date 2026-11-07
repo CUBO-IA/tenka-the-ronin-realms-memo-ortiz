@@ -2,11 +2,13 @@
 // Los identificadores están en español porque son código; las etiquetas van
 // en inglés porque las ve el jugador.
 
-export const FAJAS = [
-  { id: 'blanco', etiqueta: 'White', color: '#e8e0cc' },
+// El hakama (pantalón) tiene cuatro colores, iguales para los dos bandos.
+// La faja no se elige: queda como viene en el sprite de cada bando.
+export const HAKAMAS = [
   { id: 'negro', etiqueta: 'Black', color: '#1b1a19' },
-  { id: 'dorado', etiqueta: 'Gold', color: '#c39b3a' },
-  { id: 'bermellon', etiqueta: 'Vermilion', color: '#b33a24' },
+  { id: 'pizarra', etiqueta: 'Slate', color: '#3d4450' },
+  { id: 'marron', etiqueta: 'Brown', color: '#4a3324' },
+  { id: 'indigo_oscuro', etiqueta: 'Deep indigo', color: '#1f2a4d' },
 ];
 
 export const TOCADOS = [
@@ -39,7 +41,6 @@ export const BANDOS = [
       { id: 'indigo', etiqueta: 'Indigo', color: '#2f3f6b' },
       { id: 'carmesi', etiqueta: 'Crimson', color: '#9e2b2b' },
       { id: 'verde_bosque', etiqueta: 'Forest green', color: '#2f4f3e' },
-      { id: 'gris_ceniza', etiqueta: 'Ash gray', color: '#8b8d8c' },
       { id: 'ocre', etiqueta: 'Ochre', color: '#b07d2b' },
     ],
   },
@@ -53,13 +54,12 @@ export const BANDOS = [
       { id: 'rojo_sangre', etiqueta: 'Blood red', color: '#7a1f24' },
       { id: 'gris_humo', etiqueta: 'Smoke gray', color: '#5b5a60' },
       { id: 'azul_medianoche', etiqueta: 'Midnight blue', color: '#1d2a4a' },
-      { id: 'hueso', etiqueta: 'Bone', color: '#d8cfb8' },
     ],
   },
 ];
 
 export const idsBandos = BANDOS.map((bando) => bando.id);
-export const idsFajas = FAJAS.map((faja) => faja.id);
+export const idsHakamas = HAKAMAS.map((hakama) => hakama.id);
 export const idsTocados = TOCADOS.map((tocado) => tocado.id);
 export const idsKamon = KAMON.map((kamon) => kamon.id);
 
@@ -81,7 +81,7 @@ export function etiquetaDeBando(id) {
 export function catalogoPublico() {
   return {
     bandos: BANDOS,
-    fajas: FAJAS,
+    hakamas: HAKAMAS,
     tocados: TOCADOS,
     kamon: KAMON,
   };

@@ -6,17 +6,24 @@ Uso:
 
 Lee siempre de arte/ y escribe en public/assets/. No modifica los originales.
 Las piezas de interfaz salen del ui-kit con fondo transparente; los sprites
-quedan normalizados y con una máscara (rojo = kimono, verde = faja) para que
-el celular pueda recolorearlos en vivo.
+quedan normalizados y con una máscara (rojo = kimono, azul = hakama) para que
+el celular pueda recolorearlos en vivo. La faja no se recolorea.
+
+    python3 scripts/recortar-arte.py --solo-mascaras
+
+rehace solo las máscaras a partir de los sprites ya normalizados de
+public/assets/, para ajustar zonas sin volver a recortar todo.
 """
 
 from __future__ import annotations
+
+import sys
 
 from collections import deque
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 RAIZ = Path(__file__).resolve().parent.parent
 ARTE = RAIZ / "arte" / "piezas"
@@ -467,6 +474,9 @@ SPRITES = {
         "sash": (45, 166, 200, 196),
         "head": (25, 0, 215, 92),
         "body": (25, 94, 215, 196),
+        "hakama": (70, 194, 180, 291),
+        # La vaina pasa por delante de la cadera: no es hakama.
+        "excluir": [[(12, 208), (84, 193), (84, 213), (12, 228)]],
     },
     "sombra-sombrero": {
         "hoja": "sprites-ronin-sombra.png",
@@ -474,6 +484,8 @@ SPRITES = {
         "sash": (45, 160, 200, 194),
         "head": (20, 0, 215, 94),
         "body": (15, 96, 205, 194),
+        "hakama": (66, 194, 178, 289),
+        "excluir": [[(10, 213), (80, 198), (80, 221), (10, 240)], [(148, 150), (168, 150), (168, 218), (148, 218)]],
     },
     "luz-mono": {
         "hoja": "sprites-ronin-luz-mono.png",
@@ -481,19 +493,87 @@ SPRITES = {
         "sash": (45, 166, 200, 197),
         "head": (85, 0, 180, 95),
         "body": (25, 96, 215, 197),
+        "hakama": (72, 196, 176, 289),
+        "excluir": [[(20, 205), (84, 183), (84, 201), (20, 225)]],
     },
     "sombra-mono": {
         "hoja": "sprites-ronin-sombra-mono.png",
         "caja": (200, 50, 390, 445),
-        "sash": (45, 175, 198, 203),
-        "head": (80, 0, 180, 98),
-        "body": (15, 98, 198, 203),
+        "sash": (90, 146, 152, 166),
+        "head": (80, 0, 180, 82),
+        "body": (15, 82, 198, 166),
+        "hakama": (62, 165, 172, 284),
+        # Vaina a la izquierda y empuñadura sobre el brazo derecho.
+        "excluir": [[(40, 195), (76, 183), (76, 201), (40, 214)], [(146, 150), (184, 122), (194, 132), (158, 168)]],
     },
 }
 
 ANCHO_SPRITE = 240
 ALTO_SPRITE = 320
 ALTO_CONTENIDO = 300
+
+
+
+def _poligonos(poligonos: list, ancho: int, alto: int) -> np.ndarray:
+    """Devuelve una matriz booleana con los polígonos pintados."""
+    capa = Image.new("L", (ancho, alto), 0)
+    dibujo = ImageDraw.Draw(capa)
+    for puntos in poligonos:
+        dibujo.polygon(puntos, fill=255)
+    return np.asarray(capa) > 0
+
+
+def mascara_de_sprite(lienzo: Image.Image, nombre: str, datos: dict) -> Image.Image:
+    """Máscara del sprite: rojo = kimono, azul = hakama. El resto, negro.
+
+    Se decide por color (tono y brillo) dentro de cajas por zona, y se
+    excluyen piel, faja, cuello, sandalias y la vaina de la espada.
+    """
+    sprite = np.asarray(lienzo).astype(np.int16)
+    alto, ancho, _ = sprite.shape
+    alfa = sprite[:, :, 3]
+    r, g, b = sprite[:, :, 0], sprite[:, :, 1], sprite[:, :, 2]
+    brillo = (r + g + b) / 3
+    saturacion = sprite[:, :, :3].max(2) - sprite[:, :, :3].min(2)
+    luz = nombre.startswith("luz")
+
+    yy, xx = np.mgrid[0:alto, 0:ancho]
+
+    def caja(nombre_caja: str) -> np.ndarray:
+        x0, y0, x1, y1 = datos[nombre_caja]
+        return (xx >= x0) & (xx < x1) & (yy >= y0) & (yy < y1)
+
+    visible = alfa > 0
+    piel = (r > b + 10) & (r > g + 5)            # piel, sandalias, rojo de la espada
+    claro = brillo > 150                         # cuello, faja blanca, filo
+    excluido = _poligonos(datos.get("excluir", []), ancho, alto)
+
+    if luz:
+        # Kimono índigo: azul con algo de saturación.
+        kimono = (b > r + 12) & (b >= g) & (saturacion > 22) & (brillo > 40) & (brillo < 150)
+        hakama = brillo < 90
+    else:
+        # Kimono gris pizarra, apenas violeta; hakama casi negro.
+        # La faja y sus puntas son violeta saturado: fuera de las dos zonas.
+        violeta = (b > r + 15) & (saturacion > 30)
+        kimono = (b >= r) & (brillo > 34) & (brillo < 125) & (saturacion < 48)
+        hakama = (brillo < 62) & ~violeta
+
+    kimono &= visible & caja("body") & ~caja("sash") & ~caja("head") & ~piel & ~claro
+    hakama &= visible & caja("hakama") & ~caja("sash") & ~piel & ~excluido
+
+    mascara = np.zeros((alto, ancho, 3), dtype=np.uint8)
+    mascara[kimono] = (255, 0, 0)
+    mascara[hakama] = (0, 0, 255)
+    return Image.fromarray(mascara, "RGB")
+
+
+def solo_mascaras() -> None:
+    print("Máscaras a partir de public/assets/")
+    for nombre, datos in SPRITES.items():
+        lienzo = Image.open(SALIDA / f"ronin-{nombre}.png").convert("RGBA")
+        _guardar(mascara_de_sprite(lienzo, nombre, datos), f"ronin-{nombre}-mascara.png")
+    print()
 
 
 def extraer_sprites() -> None:
@@ -528,34 +608,7 @@ def extraer_sprites() -> None:
         lienzo.alpha_composite(sprite, ((ANCHO_SPRITE - sprite.width) // 2, ALTO_SPRITE - 10 - sprite.height))
         _guardar(lienzo, f"ronin-{nombre}.png")
 
-        # Máscara: rojo = kimono, verde = faja. El resto, negro.
-        datos_sprite = np.asarray(lienzo).astype(np.int16)
-        alto, ancho, _ = datos_sprite.shape
-        alfa = datos_sprite[:, :, 3]
-        r, g, b = datos_sprite[:, :, 0], datos_sprite[:, :, 1], datos_sprite[:, :, 2]
-        brillo = (r + g + b) / 3
-        saturacion = datos_sprite.max(2) - datos_sprite.min(2)
-
-        x0, y0, x1, y1 = datos["sash"]
-        sy0, sy1 = y0, y1
-        hx0, hy0, hx1, hy1 = datos["head"]
-        bx0, by0, bx1, by1 = datos["body"]
-
-        yy, xx = np.mgrid[0:alto, 0:ancho]
-        piel = (r > b + 10) & (r > g + 5)
-        collar = (brillo > 170) & (saturacion < 45) & (~piel)
-
-        en_faja = (xx >= x0) & (xx < x1) & (yy >= y0) & (yy < y1) & (alfa > 0)
-        faja = en_faja & (~piel) & (brillo > 18)
-
-        en_cabeza = (xx >= hx0) & (xx < hx1) & (yy >= hy0) & (yy < hy1)
-        en_cuerpo = (xx >= bx0) & (xx < bx1) & (yy >= by0) & (yy < by1)
-        kimono = en_cuerpo & (alfa > 0) & (~piel) & (~collar) & (~faja) & (~en_cabeza) & (brillo > 18)
-
-        mascara = np.zeros((alto, ancho, 3), dtype=np.uint8)
-        mascara[kimono] = (255, 0, 0)
-        mascara[faja] = (0, 255, 0)
-        _guardar(Image.fromarray(mascara, "RGB"), f"ronin-{nombre}-mascara.png")
+        _guardar(mascara_de_sprite(lienzo, nombre, datos), f"ronin-{nombre}-mascara.png")
 
         # Cabeza suelta para los botones de tocado.
         cabeza = lienzo.crop((hx0, hy0, hx1, hy1))
@@ -580,6 +633,10 @@ def extraer_sprites() -> None:
 
 
 def main() -> None:
+    if "--solo-mascaras" in sys.argv:
+        solo_mascaras()
+        return
+
     print(f"Origen: {ARTE}")
     print(f"Destino: {SALIDA}\n")
 

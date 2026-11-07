@@ -25,7 +25,7 @@ const lemaBando = $('#lema-bando');
 const estado = {
   bando: 'luz',
   kimono: null,
-  faja: null,
+  hakama: null,
   tocado: null,
   kamon: null,
 };
@@ -73,8 +73,8 @@ function kimonoActual() {
   return bandoActual()?.kimonos?.find((kimono) => kimono.id === estado.kimono) || null;
 }
 
-function fajaActual() {
-  return opciones?.fajas?.find((faja) => faja.id === estado.faja) || null;
+function hakamaActual() {
+  return opciones?.hakamas?.find((hakama) => hakama.id === estado.hakama) || null;
 }
 
 function elegirBando(id) {
@@ -121,22 +121,22 @@ function renderKimonos() {
   }
 }
 
-function renderFajas() {
-  const contenedor = $('#opciones-faja');
+function renderHakamas() {
+  const contenedor = $('#opciones-hakama');
   contenedor.innerHTML = '';
 
-  for (const faja of opciones.fajas) {
+  for (const hakama of opciones.hakamas) {
     const boton = document.createElement('button');
     boton.type = 'button';
     boton.className = 'muestra-color';
-    boton.style.setProperty('--color', faja.color);
-    boton.setAttribute('aria-pressed', String(faja.id === estado.faja));
-    boton.setAttribute('aria-label', faja.etiqueta);
-    boton.title = faja.etiqueta;
-    boton.innerHTML = `<span class="solo-lectores">${faja.etiqueta}</span>`;
+    boton.style.setProperty('--color', hakama.color);
+    boton.setAttribute('aria-pressed', String(hakama.id === estado.hakama));
+    boton.setAttribute('aria-label', hakama.etiqueta);
+    boton.title = hakama.etiqueta;
+    boton.innerHTML = `<span class="solo-lectores">${hakama.etiqueta}</span>`;
     boton.addEventListener('click', () => {
-      estado.faja = faja.id;
-      renderFajas();
+      estado.hakama = hakama.id;
+      renderHakamas();
       actualizarPreview();
     });
     contenedor.append(boton);
@@ -209,13 +209,13 @@ function renderKamon() {
 async function actualizarPreview() {
   const bando = bandoActual();
   const kimono = kimonoActual();
-  const faja = fajaActual();
+  const hakama = hakamaActual();
   if (!bando) return;
 
   preview.dataset.bando = estado.bando;
   document.body.dataset.bando = estado.bando;
   if (kimono) preview.style.setProperty('--kimono', kimono.color);
-  if (faja) preview.style.setProperty('--faja', faja.color);
+  if (hakama) preview.style.setProperty('--hakama', hakama.color);
 
   aplicarKamon($('#preview-kamon'), estado.kamon);
   lemaBando.textContent = bando.lema;
@@ -224,7 +224,7 @@ async function actualizarPreview() {
   try {
     const dibujo = await cargarPiezas(estado.bando, estado.tocado);
     if (token !== tokenPreview) return;
-    pintarRonin($('#ronin-lienzo'), dibujo, kimono?.color, faja?.color);
+    pintarRonin($('#ronin-lienzo'), dibujo, kimono?.color, hakama?.color);
   } catch {
     // Si el sprite no llega, se queda el dibujo anterior.
   }
@@ -236,11 +236,11 @@ function iniciarFormulario(datos) {
   const bando = opciones.bandos.find((elemento) => elemento.id === 'luz') || opciones.bandos[0];
   estado.bando = bando.id;
   estado.kimono = bando.kimonos[0]?.id || null;
-  estado.faja = opciones.fajas[0]?.id || null;
+  estado.hakama = opciones.hakamas[0]?.id || null;
   estado.tocado = opciones.tocados[0]?.id || null;
   estado.kamon = opciones.kamon[0]?.id || null;
 
-  if (!estado.kimono || !estado.faja || !estado.tocado || !estado.kamon) {
+  if (!estado.kimono || !estado.hakama || !estado.tocado || !estado.kamon) {
     $('#texto-error').textContent = 'The options could not be loaded. Reload the page.';
     mostrarVista('estado-error');
     return;
@@ -256,7 +256,7 @@ function iniciarFormulario(datos) {
   document.body.dataset.bando = estado.bando;
   tituloMovil.textContent = 'Create your Rōnin';
   renderKimonos();
-  renderFajas();
+  renderHakamas();
   renderTocados();
   renderKamon();
   actualizarPreview();
@@ -264,11 +264,11 @@ function iniciarFormulario(datos) {
 }
 
 async function mostrarDespierto(ronin, recienCreado) {
-  opciones = opciones || { bandos: [], fajas: [] };
+  opciones = opciones || { bandos: [], hakamas: [] };
 
   const bando = opciones.bandos.find((elemento) => elemento.id === ronin.bando);
   const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
-  const faja = opciones.fajas.find((elemento) => elemento.id === ronin.faja);
+  const hakama = opciones.hakamas.find((elemento) => elemento.id === ronin.hakama);
 
   document.body.dataset.bando = ronin.bando;
   tituloMovil.textContent = 'Your Rōnin';
@@ -281,8 +281,8 @@ async function mostrarDespierto(ronin, recienCreado) {
 
   $('#despierto-kimono-color').style.background = kimono?.color || '#888';
   $('#despierto-kimono').textContent = kimono?.etiqueta || ronin.kimono;
-  $('#despierto-faja-color').style.background = faja?.color || '#888';
-  $('#despierto-faja').textContent = faja?.etiqueta || ronin.faja;
+  $('#despierto-hakama-color').style.background = hakama?.color || '#888';
+  $('#despierto-hakama').textContent = hakama?.etiqueta || ronin.hakama;
   $('#despierto-camino').textContent = `${ronin.bandoEtiqueta} path · Era ${ronin.era}`;
 
   mostrarVista('estado-despierto');
@@ -290,7 +290,7 @@ async function mostrarDespierto(ronin, recienCreado) {
 
   try {
     const dibujo = await cargarPiezas(ronin.bando, ronin.tocado);
-    pintarRonin($('#despierto-lienzo'), dibujo, kimono?.color, faja?.color);
+    pintarRonin($('#despierto-lienzo'), dibujo, kimono?.color, hakama?.color);
   } catch {
     // La tarjeta sigue mostrando el resto aunque falte el sprite.
   }
@@ -320,7 +320,7 @@ formRonin.addEventListener('submit', async (evento) => {
         nombre,
         bando: estado.bando,
         kimono: estado.kimono,
-        faja: estado.faja,
+        hakama: estado.hakama,
         tocado: estado.tocado,
         kamon: estado.kamon,
       }),

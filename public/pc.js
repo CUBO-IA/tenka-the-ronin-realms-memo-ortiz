@@ -159,7 +159,7 @@ function mostrarRonin() {
 
   const bando = catalogo?.bandos?.find((elemento) => elemento.id === ronin.bando);
   const kimono = bando?.kimonos?.find((elemento) => elemento.id === ronin.kimono);
-  const faja = catalogo?.fajas?.find((elemento) => elemento.id === ronin.faja);
+  const hakama = catalogo?.hakamas?.find((elemento) => elemento.id === ronin.hakama);
 
   document.body.dataset.bando = ronin.bando;
   aplicarKamon($('#ronin-kamon'), ronin.kamon);
@@ -168,8 +168,8 @@ function mostrarRonin() {
 
   $('#muestra-kimono').style.background = kimono?.color || colorPorId([], ronin.kimono);
   $('#muestra-kimono-texto').textContent = kimono?.etiqueta || ronin.kimono;
-  $('#muestra-faja').style.background = faja?.color || colorPorId([], ronin.faja);
-  $('#muestra-faja-texto').textContent = faja?.etiqueta || ronin.faja;
+  $('#muestra-hakama').style.background = hakama?.color || colorPorId([], ronin.hakama);
+  $('#muestra-hakama-texto').textContent = hakama?.etiqueta || ronin.hakama;
   $('#muestra-camino').textContent = `${ronin.bandoEtiqueta} path · Era ${ronin.era}`;
 
   if (usuario) {
@@ -180,7 +180,7 @@ function mostrarRonin() {
   cargarPiezas(ronin.bando, ronin.tocado)
     .then((dibujo) => {
       if (token !== tokenRonin) return;
-      pintarRonin($('#ronin-lienzo'), dibujo, kimono?.color, faja?.color);
+      pintarRonin($('#ronin-lienzo'), dibujo, kimono?.color, hakama?.color);
     })
     .catch(() => {
       // Si el sprite no carga, la tarjeta sigue mostrando el resto.

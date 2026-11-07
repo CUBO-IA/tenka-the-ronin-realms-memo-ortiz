@@ -30,7 +30,7 @@ export function roninValido(extra = {}) {
     nombre: 'Hideo',
     bando: 'luz',
     kimono: 'indigo',
-    faja: 'blanco',
+    hakama: 'negro',
     tocado: 'sombrero_paja',
     kamon: 'grulla',
     ...extra,
